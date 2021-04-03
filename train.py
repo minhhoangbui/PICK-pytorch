@@ -9,7 +9,8 @@ import collections
 import numpy as np
 import torch
 import torch.distributed as dist
-from torch.nn.parallel import DistributedDataParallel as DDP
+import torch.utils.data
+import torch.backends.cudnn
 
 import model.pick as pick_arch_module
 from data_utils import pick_dataset as pick_dataset_module
@@ -18,8 +19,6 @@ from data_utils.pick_dataset import BatchCollateFn
 from parse_config import ConfigParser
 from trainer import Trainer
 
-import torch.nn as nn
-import torch.optim as optim
 
 # fix random seeds for reproducibility
 SEED = 123
@@ -139,7 +138,8 @@ if __name__ == '__main__':
                       help='indices of GPUs to be available (default: all)')
 
     # custom cli options to modify configuration from default values given in json file.
-    CustomArgs = collections.namedtuple('CustomArgs', 'flags default type target help')  # CustomArgs.flags, CustomArgs.default
+    CustomArgs = collections.namedtuple('CustomArgs', 'flags default type target help')
+    # CustomArgs.flags, CustomArgs.default
     options = [
         # CustomArgs(['--lr', '--learning_rate'], default=0.0001, type=float, target='optimizer;args;lr',
         #            help='learning rate (default: 0.0001)'),

@@ -10,7 +10,6 @@ from pathlib import Path
 from torch.utils.data.dataloader import DataLoader
 from allennlp.data.dataset_readers.dataset_utils.span_utils import bio_tags_to_spans
 
-from parse_config import ConfigParser
 import model.pick as pick_arch_module
 from data_utils.pick_dataset import PICKDataset
 from data_utils.pick_dataset import BatchCollateFn
@@ -38,6 +37,7 @@ def main(args):
                                resized_image_size=(480, 960),
                                ignore_error=False,
                                training=False)
+
     test_data_loader = DataLoader(test_dataset, batch_size=args.bs, shuffle=False,
                                   num_workers=2, collate_fn=BatchCollateFn(training=False))
 
@@ -53,7 +53,7 @@ def main(args):
                     input_data_item[key] = input_value.to(device)
 
             # For easier debug.
-            image_names = input_data_item["filenames"]
+            # image_names = input_data_item["filenames"]
 
             output = pick_model(**input_data_item)
             logits = output['logits']  # (B, N*T, out_dim)

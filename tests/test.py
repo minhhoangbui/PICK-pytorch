@@ -2,17 +2,14 @@
 # @Author: Wenwen Yu
 # @Created Time: 7/8/2020 10:53 AM
 
-import math
 import argparse
 import collections
 from pathlib import Path
 from tqdm import tqdm
-import pandas as pd
-import cv2
 
 import torch
-import torch.nn as nn
 from torch.utils.data.dataloader import DataLoader
+import pandas as pd
 
 from model.graph import GLCN
 from parse_config import ConfigParser
@@ -42,7 +39,7 @@ def test_model():
                       help='path to latest checkpoint (default: None)')
     args.add_argument('-d', '--device', default=None, type=str,
                       help='indices of GPUs to enable (default: all)')
-    config = ConfigParser.from_args(args)
+    config = ConfigParser.from_args(args, None)
 
     logger = config.get_logger('train')
 
@@ -63,23 +60,30 @@ def test_datasets():
                           iob_tagging_type='box_level',
                           resized_image_size=(480, 960))
 
-    data_loader = DataLoader(dataset, batch_size=3, collate_fn=BatchCollateFn(), num_workers=2)
+    data_loader = DataLoader(dataset, batch_size=10, collate_fn=BatchCollateFn(), num_workers=2)
     for idx, data_item in tqdm(enumerate(data_loader)):
         whole_image = data_item['whole_image']
         relation_features = data_item['relation_features']
         text_segments = data_item['text_segments']
         text_length = data_item['text_length']
         iob_tags_label = data_item['iob_tags_label']
-        # entity_types = data_item['entity_types'] # (B, num_boxes)
         boxes_coordinate = data_item['boxes_coordinate']
         mask = data_item['mask']
-        print(whole_image.shape)
+        print('whole_image: ', whole_image.shape)
+        print('relation_features: ', relation_features.shape)
+        print('text_segments: ', text_segments.shape)
+        print('text_length: ', text_length.shape)
+        print('iob_tags_label: ', iob_tags_label.shape)
+        print('boxes_coordinate: ', boxes_coordinate.shape)
+        print('mask: ', mask.shape)
+        print(data_item['filenames'])
+        exit()
 
 
 def test_model_forward():
     # torch.backends.cudnn.benchmark = False
     args = argparse.ArgumentParser(description='PICK parameters')
-    args.add_argument('-c', '--config', default='../config.json', type=str,
+    args.add_argument('-c', '--config', default='./config.json', type=str,
                       help='config file path (default: None)')
     args.add_argument('-r', '--resume', default=None, type=str,
                       help='path to latest checkpoint (default: None)')
@@ -115,7 +119,8 @@ def test_model_forward():
     data_loader = DataLoader(dataset, batch_size=2, collate_fn=BatchCollateFn(), num_workers=2)
     for idx, data_item in tqdm(enumerate(data_loader)):
         for key, tensor in data_item.items():
-            data_item[key] = tensor.to(device)
+            if key != 'filenames:':
+                data_item[key] = tensor.to(device)
         output = pick_model(**data_item)
 
         logits = output['logits']
@@ -145,7 +150,7 @@ def test_metrics():
     print(data.index)
 
 
-# used for dataparallel mode training, distributeddataparallel model can change it for speed up.
+# used for data-parallel mode training, distributed-data-parallel model can change it for speed up.
 # 1. pick_dataset.py BatchCollateFn __call__ line 190  max_boxes_num_batch & max_transcript_len
 # 2. graph.py GraphLearningLayer line 51 mask = self.compute_static_mask(box_num) instead of compute_dynamic_mask func
 # 3. decoder.py UnionLayer line 142 max_doc_seq_len = doc_seq_len.max()
@@ -155,8 +160,8 @@ def test_metrics():
 
 if __name__ == '__main__':
     # test_glcn_model()
-    test_model()
+    # test_model()
     # test_resnet()
     # test_datasets()
-    # test_model_forward()
+    test_model_forward()
     # test_metrics()

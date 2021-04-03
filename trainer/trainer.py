@@ -24,7 +24,7 @@ class Trainer:
 
     def __init__(self, model, optimizer, config, data_loader,
                  valid_data_loader=None, lr_scheduler=None, max_len_step=None):
-        '''
+        """
 
         :param model:
         :param optimizer:
@@ -33,7 +33,7 @@ class Trainer:
         :param valid_data_loader:
         :param lr_scheduler:
         :param max_len_step:  controls number of batches(steps) in each epoch.
-        '''
+        """
         self.config = config
         self.distributed = config['distributed']
         if self.distributed:
@@ -88,7 +88,7 @@ class Trainer:
 
         if self.distributed:
             self.model = DDP(self.model, device_ids=self.device_ids, output_device=self.device_ids[0],
-                            find_unused_parameters=True)
+                             find_unused_parameters=True)
 
         self.data_loader = data_loader
         if max_len_step is None:  # max length of iteration step of every epoch
@@ -107,8 +107,7 @@ class Trainer:
             np.sqrt(data_loader.batch_size))
 
         val_step_interval = self.config['trainer']['val_step_interval']
-        # self.val_step_interval = val_step_interval if val_step_interval!= -1 and 0 < val_step_interval < self.len_step\
-        #                                             else int(np.sqrt(data_loader.batch_size))
+
         self.val_step_interval = val_step_interval
 
         self.gl_loss_lambda = self.config['trainer']['gl_loss_lambda']
@@ -134,7 +133,7 @@ class Trainer:
                 self.data_loader.sampler.set_epoch(epoch)
             result_dict = self._train_epoch(epoch)
 
-            # print logged informations to the screen
+            # print logged information to the screen
             if self.do_validation:
                 val_result_dict = result_dict['val_result_dict']
                 val_res = SpanBasedF1MetricTracker.dict2str(val_result_dict)
@@ -153,7 +152,7 @@ class Trainer:
             if self.monitor_mode != 'off' and self.do_validation:
                 best, not_improved_count = self._is_best_monitor_metric(best, not_improved_count, val_result_dict)
                 if not_improved_count > self.early_stop:
-                    self.logger_info("Validation performance didn\'t improve for {} epochs. "
+                    self.logger_info("Validation performance didn't improve for {} epochs. "
                                      "Training stops.".format(self.early_stop))
                     break
 
@@ -161,13 +160,13 @@ class Trainer:
                 self._save_checkpoint(epoch, save_best=best)
 
     def _is_best_monitor_metric(self, best, not_improved_count, val_result_dict):
-        '''
+        """
         monitor metric
         :param best:
         :param not_improved_count:
         :param val_result_dict:
         :return:
-        '''
+        """
         entity_name, metric = self.monitor_metric.split('-')
         val_monitor_metric_res = val_result_dict[entity_name][metric]
         try:
@@ -188,16 +187,17 @@ class Trainer:
         return best, not_improved_count
 
     def _train_epoch(self, epoch):
-        '''
+        """
         Training logic for an epoch
         :param epoch: Integer, current training epoch.
         :return: A log dict that contains average loss and metric in this epoch.
-        '''
+        """
         self.model.train()
         self.train_loss_metrics.reset()
-        ## step iteration start ##
+        # step iteration start ##
         for step_idx, input_data_item in enumerate(self.data_loader):
             step_idx += 1
+
             for key, input_value in input_data_item.items():
                 if input_value is not None and isinstance(input_value, torch.Tensor):
                     input_data_item[key] = input_value.to(self.device, non_blocking=True)
@@ -255,7 +255,6 @@ class Trainer:
                 self.logger_info('Train Epoch:[{}/{}] Step:[{}/{}] Total Loss: {:.6f} GL_Loss: {:.6f} CRF_Loss: {:.6f}'.
                                  format(epoch, self.epochs, step_idx, self.len_step,
                                         avg_loss.item(), avg_gl_loss.item() * self.gl_loss_lambda, avg_crf_loss.item()))
-                # self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
 
             # do validation after val_step_interval iteration
             if self.do_validation and step_idx % self.val_step_interval == 0:
@@ -273,7 +272,7 @@ class Trainer:
             if step_idx == self.len_step + 1:
                 break
 
-        ## step iteration end ##
+        # step iteration end ##
 
         # {'loss': avg_loss, 'gl_loss': avg_gl_loss, 'crf_loss': avg_crf_loss}
         log = self.train_loss_metrics.result()
@@ -289,11 +288,11 @@ class Trainer:
         return log
 
     def _valid_epoch(self, epoch):
-        '''
+        """
          Validate after training an epoch or regular step, this is a time-consuming procedure if validation data is big.
         :param epoch: Integer, current training epoch.
         :return: A dict that contains information about validation
-        '''
+        """
 
         self.model.eval()
         self.valid_f1_metrics.reset()
@@ -347,12 +346,13 @@ class Trainer:
 
         return f1_result_dict
 
-    def average_gradients(self, model):
-        '''
+    @staticmethod
+    def average_gradients(model):
+        """
         Gradient averaging
         :param model:
         :return:
-        '''
+        """
         size = float(dist.get_world_size())
         for param in model.parameters():
             dist.all_reduce(param.grad.data, op=dist.reduce_op.SUM)
@@ -365,12 +365,12 @@ class Trainer:
         self.logger.warning(msg) if self.local_master else None
 
     def _prepare_device(self, local_rank, local_world_size):
-        '''
+        """
          setup GPU device if available, move model into configured device
         :param local_rank:
         :param local_world_size:
         :return:
-        '''
+        """
         if self.distributed:
             ngpu_per_process = torch.cuda.device_count() // local_world_size
             device_ids = list(range(local_rank * ngpu_per_process, (local_rank + 1) * ngpu_per_process))
@@ -411,12 +411,12 @@ class Trainer:
             return device, list_ids
 
     def _save_checkpoint(self, epoch, save_best=False):
-        '''
+        """
         Saving checkpoints
         :param epoch:  current epoch number
         :param save_best: if True, rename the saved checkpoint to 'model_best.pth'
         :return:
-        '''
+        """
         # only local master process do save model
         if not self.local_master:
             return
@@ -445,11 +445,11 @@ class Trainer:
             self.logger_info("Saving checkpoint: {} ...".format(filename))
 
     def _resume_checkpoint(self, resume_path):
-        '''
+        """
         Resume from saved checkpoints
         :param resume_path: Checkpoint path to be resumed
         :return:
-        '''
+        """
         resume_path = str(resume_path)
         self.logger_info("Loading checkpoint: {} ...".format(resume_path))
         # map_location = {'cuda:%d' % 0: 'cuda:%d' % self.config['local_rank']}

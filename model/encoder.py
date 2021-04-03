@@ -28,7 +28,7 @@ class Encoder(nn.Module):
                  image_encoder: str = 'resnet50',
                  roi_pooling_mode: str = 'roi_align',
                  roi_pooling_size: Tuple[int, int] = (7, 7)):
-        '''
+        """
         convert image segments and text segments to node embedding.
         :param char_embedding_dim:
         :param out_dim:
@@ -41,7 +41,7 @@ class Encoder(nn.Module):
         :param image_encoder:
         :param roi_pooling_mode:
         :param roi_pooling_size:
-        '''
+        """
         super().__init__()
 
         self.dropout = dropout
@@ -91,7 +91,7 @@ class Encoder(nn.Module):
 
     def forward(self, images: torch.Tensor, boxes_coordinate: torch.Tensor, transcripts: torch.Tensor,
                 src_key_padding_mask: torch.Tensor):
-        '''
+        """
 
         :param images: whole_images, shape is (B, N, H, W, C), where B is batch size, N is the number of segments of
                 the documents, H is height of image, W is width of image, C is channel of images (default is 3).
@@ -105,7 +105,7 @@ class Encoder(nn.Module):
             will be filled with -inf.
         need_weights: output attn_output_weights.
         :return: set of nodes X, shape is (B*N, T, D)
-        '''
+        """
 
         B, N, T, D = transcripts.shape
 

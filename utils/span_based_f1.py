@@ -54,7 +54,7 @@ class SpanBasedF1Measure(Metric):
         """
         Parameters
         ----------
-        vocabulary : ``Vocabulary``, required.
+        vocab : ``Vocabulary``, required.
             A vocabulary containing the tag namespace.
         tag_namespace : str, required.
             This metric assumes that a BIO format is used in which the
@@ -157,7 +157,7 @@ class SpanBasedF1Measure(Metric):
 
         argmax_predictions = argmax_predictions.float()
 
-        # Iterate over timesteps in batch.
+        # Iterate over time-steps in batch.
         batch_size = gold_labels.size(0)
         for i in range(batch_size):
             sequence_prediction = argmax_predictions[i, :]
@@ -286,9 +286,9 @@ class SpanBasedF1Measure(Metric):
         all_metrics["mEF-overall"] = f1_measure
 
         if sum(self._total.values()) != 0:
-            all_metrics["mAE-overall"] = sum(self._true_positives.values()) / sum(self._total.values())
+            all_metrics["mEA-overall"] = sum(self._true_positives.values()) / sum(self._total.values())
         else:
-            all_metrics["mAE-overall"] = 0
+            all_metrics["mEA-overall"] = 0
 
         if reset:
             self.reset()

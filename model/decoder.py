@@ -11,7 +11,6 @@ from torch import Tensor
 
 from .crf import ConditionalRandomField
 from utils.class_utils import keys_vocab_cls, iob_labels_vocab_cls
-from data_utils import documents
 
 logger = logging.getLogger('PICK')
 
@@ -24,7 +23,7 @@ class MLPLayer(nn.Module):
                  layer_norm: bool = False,
                  dropout: Optional[float] = 0.0,
                  activation: Optional[str] = 'relu'):
-        '''
+        """
         transform output of LSTM layer to logits, as input of crf layers
         :param in_dim:
         :param out_dim:
@@ -32,7 +31,7 @@ class MLPLayer(nn.Module):
         :param layer_norm:
         :param dropout:
         :param activation:
-        '''
+        """
         super().__init__()
         layers = []
         activation_layer = {
@@ -60,8 +59,8 @@ class MLPLayer(nn.Module):
         self.mlp = nn.Sequential(*layers)
         self.out_dim = out_dim if out_dim else hidden_dims[-1]
 
-    def forward(self, *input: torch.Tensor) -> torch.Tensor:
-        return self.mlp(torch.cat(input, 1))
+    def forward(self, *inputs: torch.Tensor) -> torch.Tensor:
+        return self.mlp(torch.cat(inputs, 1))
 
 
 class BiLSTMLayer(nn.Module):
@@ -82,19 +81,19 @@ class BiLSTMLayer(nn.Module):
         return x[sorted_order], sorted_lenght, invert_order, h_0, c_0
 
     def forward(self, x_seq: torch.Tensor,
-                lenghts: torch.Tensor,
+                lengths: torch.Tensor,
                 initial: Tuple[torch.Tensor, torch.Tensor]):
-        '''
+        """
 
         :param x_seq: (B, N*T, D)
-        :param lenghts: (B,)
+        :param lengths: (B,)
         :param initial: (num_layers * directions, batch, D)
         :return: (B, N*T, out_dim)
-        '''
+        """
 
         # B*N, T, hidden_size
-        x_seq, sorted_lengths, invert_order, h_0, c_0 = self.sort_tensor(x_seq, lenghts, initial[0], initial[0])
-        packed_x = nn.utils.rnn.pack_padded_sequence(x_seq, lengths=sorted_lengths, batch_first=True)
+        x_seq, sorted_lengths, invert_order, h_0, c_0 = self.sort_tensor(x_seq, lengths, initial[0], initial[0])
+        packed_x = nn.utils.rnn.pack_padded_sequence(x_seq, lengths=sorted_lengths.cpu(), batch_first=True)
         self.lstm.flatten_parameters()
         output, _ = self.lstm(packed_x)
         output, _ = nn.utils.rnn.pad_packed_sequence(output, batch_first=True,
@@ -112,7 +111,7 @@ class UnionLayer(nn.Module):
         super().__init__()
 
     def forward(self, x: Tensor, x_gcn: Tensor, mask: Tensor, length: Tensor, tags):
-        '''
+        """
         For a document, we merge all non-paddding (valid) x and x_gcn value together in a document-level format,
         then feed it into crf layer.
         :param x: set of nodes, the output of encoder, (B, N, T, D)
@@ -125,7 +124,7 @@ class UnionLayer(nn.Module):
                 new_mask, (B, max_doc_seq_len)
                 doc_seq_len, (B,)
                 new_tag, (B, max_doc_seq_len)
-        '''
+        """
         B, N, T, D = x.shape
         x = x.reshape(B, N * T, -1)
         mask = mask.reshape(B, N * T)
@@ -190,7 +189,7 @@ class Decoder(nn.Module):
         self.crf_layer = ConditionalRandomField(**crf_kwargs)
 
     def forward(self, x: Tensor, x_gcn: Tensor, mask: Tensor, length: Tensor, tags: Tensor):
-        '''
+        """
 
         :param x: set of nodes, the output of encoder, (B, N, T, D)
         :param x_gcn: node embedding, the output of graph module, (B, N, D)
@@ -198,7 +197,7 @@ class Decoder(nn.Module):
         :param length: the length of every segments (boxes) of documents, (B, N)
         :param tags: IBO label for every segments of documents, (B, N, T)
         :return:
-        '''
+        """
         # new_x: (B, max_doc_seq_len, D), new_mask: (B, max_doc_seq_len),
         # doc_seq_len: (B, ), new_tag: (B, N*T)
         new_x, new_mask, doc_seq_len, new_tag = self.union_layer(x, x_gcn, mask, length, tags)

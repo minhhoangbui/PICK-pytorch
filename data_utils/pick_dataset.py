@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 # @Author: Wenwen Yu
 # @Created Time: 7/9/2020 9:16 PM
-import glob
 import os
 from typing import *
 from pathlib import Path
 import warnings
 import random
-from overrides import overrides
 
 import torch
 import torch.nn.functional as F
@@ -32,7 +30,7 @@ class PICKDataset(Dataset):
                  ignore_error: bool = False,
                  training: bool = True
                  ):
-        '''
+        """
 
         :param files_name: containing training and validation samples list file.
         :param boxes_and_transcripts_folder: gt or ocr result containing transcripts, boxes and box entity type (optional).
@@ -40,11 +38,11 @@ class PICKDataset(Dataset):
         :param entities_folder: exactly entity type and entity value of documents, containing json format file
         :param iob_tagging_type: 'box_level', 'document_level', 'box_and_within_box_level'
         :param resized_image_size: resize whole image size, (w, h)
-        :param keep_ratio: TODO implement this parames
+        :param keep_ratio: TODO implement this parameters
         :param ignore_error:
         :param training: True for train and validation mode, False for test mode. True will also load labels,
         and files_name and entities_file must be set.
-        '''
+        """
         super().__init__()
         self._image_ext = None
         self._ann_ext = None
@@ -69,13 +67,13 @@ class PICKDataset(Dataset):
             self.images_folder: Path = Path(images_folder)
 
         if not (self.boxes_and_transcripts_folder.exists() and self.images_folder.exists()):
-            raise FileNotFoundError('Not contain boxes_and_transcripts floader {} or images folder {}.'
+            raise FileNotFoundError('Not contain boxes_and_transcripts folder {} or images folder {}.'
                                     .format(self.boxes_and_transcripts_folder.as_posix(),
                                             self.images_folder.as_posix()))
         if self.training:
             self.files_list = pd.read_csv(self.files_name.as_posix(), header=None,
-                                          names=['index', 'document_class', 'file_name'],
-                                          dtype={'index': int, 'document_class': str, 'file_name': str})
+                                          names=['index', 'file_name'],
+                                          dtype={'index': int, 'file_name': str})
         else:
             self.files_list = list(self.boxes_and_transcripts_folder.glob('*.tsv'))
 
@@ -102,16 +100,15 @@ class PICKDataset(Dataset):
 
         return self.boxes_and_transcripts_folder.joinpath(basename + self._ann_ext)
 
-    @overrides
     def __getitem__(self, index):
 
         if self.training:
-            dataitem: pd.Series = self.files_list.iloc[index]
+            data_item: pd.Series = self.files_list.iloc[index]
             # config file path
-            boxes_and_transcripts_file = self.get_ann_file(Path(dataitem['file_name']).stem)
-            image_file = self.get_image_file(Path(dataitem['file_name']).stem)
-            entities_file = self.entities_folder.joinpath(Path(dataitem['file_name']).stem + '.txt')
-            # documnets_class = dataitem['document_class']
+            boxes_and_transcripts_file = self.get_ann_file(data_item['file_name'])
+            image_file = self.get_image_file(data_item['file_name'])
+
+            entities_file = self.entities_folder.joinpath(data_item['file_name'] + '.txt')
         else:
             boxes_and_transcripts_file = self.get_ann_file(Path(self.files_list[index]).stem)
             image_file = self.get_image_file(Path(self.files_list[index]).stem)
@@ -144,9 +141,9 @@ class PICKDataset(Dataset):
 
 
 class BatchCollateFn(object):
-    '''
+    """
     padding input (List[Example]) with same shape, then convert it to batch input.
-    '''
+    """
 
     def __init__(self, training: bool = True):
         self.trsfm = transforms.Compose([
@@ -159,16 +156,18 @@ class BatchCollateFn(object):
     def __call__(self, batch_list: List[Document]):
 
         # dynamic calculate max boxes number of batch,
-        # this is suitable to one gpus or multi-nodes multi-gpus trianing mode, due to pytorch distributed training strategy.
+        # this is suitable to one gpus or multi-nodes multi-gpus trianing mode,
+        # due to pytorch distributed training strategy.
         max_boxes_num_batch = max([x.boxes_num for x in batch_list])
         max_transcript_len = max([x.transcript_len for x in batch_list])
 
-        # fix MAX_BOXES_NUM and MAX_TRANSCRIPT_LEN. this ensures batch has same shape, but lead to waste memory and slow speed..
+        # fix MAX_BOXES_NUM and MAX_TRANSCRIPT_LEN. this ensures batch has same shape,
+        # but lead to waste memory and slow speed..
         # this is suitable to one nodes multi gpus training mode, due to pytorch DataParallel training strategy
         # max_boxes_num_batch = documents.MAX_BOXES_NUM
         # max_transcript_len = documents.MAX_TRANSCRIPT_LEN
 
-        ### padding every sample with same shape, then construct batch_list samples  ###
+        # padding every sample with same shape, then construct batch_list samples
 
         # whole image, B, C, H, W
         image_batch_tensor = torch.stack([self.trsfm(x.whole_image) for x in batch_list], dim=0).float()

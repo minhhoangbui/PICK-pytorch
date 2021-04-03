@@ -26,7 +26,7 @@ class GraphLearningLayer(nn.Module):
         nn.init.uniform_(self.learn_w, a=0, b=1)
 
     def forward(self, x: Tensor, adj: Tensor, box_num: Tensor = None):
-        '''
+        """
 
         :param x: nodes set, (B*N, D)
         :param adj: init adj, (B, N, N, default is 1)
@@ -34,7 +34,7 @@ class GraphLearningLayer(nn.Module):
         :return:
                 out, soft adj matrix
                 gl loss
-        '''
+        """
         B, N, D = x.shape
 
         # (B, N, D)
@@ -75,13 +75,13 @@ class GraphLearningLayer(nn.Module):
 
     @staticmethod
     def compute_static_mask(box_num: Tensor):
-        '''
+        """
         compute -1 mask, if node(box) is not exist, the length of mask is documents.MAX_BOXES_NUM,
         this will help with one nodes multi gpus training mechanism, and ensure batch shape is same. but this operation
         lead to waste memory.
         :param box_num: (B, 1)
         :return: (B, N, N, 1)
-        '''
+        """
         max_len = documents.MAX_BOXES_NUM
 
         # (B, N)
@@ -107,12 +107,12 @@ class GraphLearningLayer(nn.Module):
 
     @staticmethod
     def compute_dynamic_mask(box_num: Tensor):
-        '''
+        """
         compute -1 mask, if node(box) is not exist, the length of mask is calculate by max(box_num),
         this will help with multi nodes multi gpus training mechanism, ensure batch of different gpus have same shape.
         :param box_num: (B, 1)
         :return: (B, N, N, 1)
-        '''
+        """
         max_len = torch.max(box_num)
 
         # (B, N)
@@ -137,14 +137,14 @@ class GraphLearningLayer(nn.Module):
         return mask.unsqueeze(-1)
 
     def _graph_learning_loss(self, x_hat: Tensor, adj: Tensor, box_num: Tensor):
-        '''
+        """
         calculate graph learning loss
         :param x_hat: (B, N, D)
         :param adj: (B, N, N)
         :param box_num: (B, 1)
         :return:
             gl_loss
-        '''
+        """
 
         B, N, D = x_hat.shape
         # (B, N, N, out_dim)
@@ -155,7 +155,7 @@ class GraphLearningLayer(nn.Module):
         box_num_div = 1 / torch.pow(box_num.float(), 2)
 
         # (B, N, N)
-        dist_loss = adj + self.eta * torch.norm(x_i - x_j, dim=3) # remove square operation duo to it can cause nan loss.
+        dist_loss = adj + self.eta * torch.norm(x_i - x_j, dim=3)
         dist_loss = torch.exp(dist_loss)
         # (B,)
         dist_loss = torch.sum(dist_loss, dim=(1, 2)) * box_num_div.squeeze(-1)
@@ -168,11 +168,11 @@ class GraphLearningLayer(nn.Module):
 
 class GCNLayer(nn.Module):
     def __init__(self, in_dim: int, out_dim: int):
-        '''
+        """
         perform graph convolution operation
         :param in_dim:
         :param out_dim:
-        '''
+        """
         super().__init__()
 
         self.w_alpha = nn.Parameter(torch.empty(in_dim, out_dim))
@@ -183,24 +183,23 @@ class GCNLayer(nn.Module):
 
         self.inint_parameters()
 
-    def inint_parameters(self):
+    def init_parameters(self):
         nn.init.kaiming_uniform_(self.w_alpha, a=math.sqrt(5))
         nn.init.kaiming_uniform_(self.w_vi, a=math.sqrt(5))
         nn.init.kaiming_uniform_(self.w_vj, a=math.sqrt(5))
         nn.init.uniform_(self.bias_h, a=0, b=1)
         nn.init.kaiming_uniform_(self.w_node, a=math.sqrt(5))
 
-    def forward(self, x: Tensor, alpha: Tensor, adj: Tensor, box_num: Tensor):
-        '''
+    def forward(self, x: Tensor, alpha: Tensor, adj: Tensor):
+        """
 
         :param x: nodes set (node embedding), (B, N, in_dim)
         :param alpha: relation embedding, (B, N, N, in_dim)
         :param adj: learned soft adj matrix, (B, N, N)
-        :param box_num: (B, 1)
         :return:
                 x_out: updated node embedding, (B, N, out_dim)
                 alpha: updated relation embedding, (B, N, N, out_dim)
-        '''
+        """
 
         B, N, in_dim = x.shape
 
@@ -236,7 +235,7 @@ class GLCN(nn.Module):
                  eta: float = 1,
                  learning_dim: int = 128,
                  num_layers=2):
-        '''
+        """
         perform graph learning and multi-time graph convolution operation
         :param in_dim:
         :param out_dim:
@@ -244,7 +243,7 @@ class GLCN(nn.Module):
         :param eta:
         :param learning_dim:
         :param num_layers:
-        '''
+        """
         super().__init__()
 
         self.gl_layer = GraphLearningLayer(in_dim=in_dim, gamma=gamma, eta=eta, learning_dim=learning_dim)
@@ -260,7 +259,7 @@ class GLCN(nn.Module):
         self.alpha_transform = nn.Linear(6, in_dim, bias=False)
 
     def forward(self, x: Tensor, rel_features: Tensor, adj: Tensor, box_num: Tensor, **kwargs):
-        '''
+        """
 
         :param x: nodes embedding, (B*N, D)
         :param rel_features: relation embedding, (B, N, N, 6)
@@ -268,7 +267,7 @@ class GLCN(nn.Module):
         :param box_num: (B, 1)
         :param kwargs:
         :return:
-        '''
+        """
         # relation features embedding, (B, N, N, in_dim)
         alpha = self.alpha_transform(rel_features)
 

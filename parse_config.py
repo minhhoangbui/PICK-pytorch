@@ -9,8 +9,6 @@ from functools import reduce, partial
 from operator import getitem
 from datetime import datetime
 
-import torch.distributed as dist
-
 from logger import setup_logging
 from utils import read_json, write_json
 
@@ -18,18 +16,21 @@ from utils import read_json, write_json
 class ConfigParser:
     def __init__(self, config, resume=None, modification=None, run_id=None):
         """
-        class to parse configuration json file. Handles hyperparameters for training, initializations of modules, checkpoint saving
+        class to parse configuration json file. Handles hyper-parameters for training, initializations of modules,
+        checkpoint saving
         and logging module.
-        :param config: Dict containing configurations, hyperparameters for training. contents of `config.json` file for example.
+        :param config: Dict containing configurations, hyper-parameters for training. contents of `config.json` file for
+        example.
         :param resume: String, path to the checkpoint being loaded.
         :param modification: Dict keychain:value, specifying position values to be replaced from config dict.
-        :param run_id: Unique Identifier for training processes. Used to save checkpoints and training log. Timestamp is being used as default
+        :param run_id: Unique Identifier for training processes. Used to save checkpoints and training log. Timestamp is
+        being used as default
         """
         # load config file and apply modification
         self._config = _update_config(config, modification)
         self.resume = resume
         # str to bool, from modification or from default json file
-        self.update_config('distributed', (self.config['distributed'] == 'true') or self.config['distributed'] == True)
+        self.update_config('distributed', (self.config['distributed'] == 'true') or self.config['distributed'])
 
         if self.config['local_rank'] == 0: # only local master process create saved output dir
             # set save_dir where trained model and log will be saved.
@@ -60,12 +61,12 @@ class ConfigParser:
             }
 
     @classmethod
-    def from_args(cls, args: ArgumentParser, options: collections.namedtuple = ''):
+    def from_args(cls, args: ArgumentParser, options: collections.namedtuple):
         """
         Initialize this class from some cli arguments. Used in train, test.
         """
         for opt in options:
-            args.add_argument(*opt.flags, default=opt.default, type=opt.type, help = opt.help)
+            args.add_argument(*opt.flags, default=opt.default, type=opt.type, help=opt.help)
         if not isinstance(args, tuple):
             args = args.parse_args()
 
@@ -114,6 +115,7 @@ class ConfigParser:
         `function = lambda *args, **kwargs: module.name(a, *args, b=1, **kwargs)`.
         """
         module_name = self[name]['type']
+        print(module_name)
         module_args = dict(self[name]['args'])
         assert all([k not in module_args for k in kwargs]), 'Overwriting kwargs given in config file is not allowed'
         module_args.update(kwargs)
@@ -124,7 +126,7 @@ class ConfigParser:
         return self.config[name]
 
     def update_config(self, key, value):
-        '''Set config value ike ordinary dict. '''
+        """Set config value ike ordinary dict. """
         self.config[key] = value
 
     def get_logger(self, name, verbosity=2):

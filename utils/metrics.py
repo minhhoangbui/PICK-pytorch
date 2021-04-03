@@ -13,11 +13,11 @@ import tabulate
 
 class MetricTracker:
     def __init__(self, *keys, writer=None):
-        '''
+        """
         loss metric tracker
         :param keys:
         :param writer:
-        '''
+        """
         self.writer = writer
         columns = ['total', 'counts', 'average']
         self._data = pd.DataFrame(np.zeros((len(keys), len(columns))), index=keys, columns=columns)
@@ -42,17 +42,16 @@ class MetricTracker:
 
 
 class SpanBasedF1MetricTracker:
-    '''
+    """
     mEF metrics tracker
-    '''
+    """
 
     def __init__(self, vocab, **kwargs):
-        metric = SpanBasedF1Measure(vocab=vocab, **kwargs)
-        self._metric = metric
+        self._metric = SpanBasedF1Measure(vocab=vocab, **kwargs)
         self.reset()
 
-    def update(self, class_probailites, tags, mask):
-        self._metric(class_probailites, tags, mask.float())
+    def update(self, class_probabilities, tags, mask):
+        self._metric(class_probabilities, tags, mask.float())
 
     def result(self):
         metric = self._metric.get_metric()
