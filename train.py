@@ -13,9 +13,9 @@ import torch.utils.data
 import torch.backends.cudnn
 
 import model.pick as pick_arch_module
-from data_utils import pick_dataset as pick_dataset_module
+from datasets import pick_dataset as pick_dataset_module
 
-from data_utils.pick_dataset import BatchCollateFn
+from datasets.pick_dataset import BatchCollateFn
 from parse_config import ConfigParser
 from trainer import Trainer
 
@@ -49,7 +49,10 @@ def main(config: ConfigParser, local_master: bool, logger=None):
                 f'Validation datasets: {len(val_dataset)} samples.') if local_master else None
 
     # build model architecture
-    pick_model = config.init_obj('model_arch', pick_arch_module)
+
+    pick_model = config.init_obj('model_arch', pick_arch_module,
+                                 iob_labels_vocab_cls=train_dataset.get_iob_labels_vocab())
+
     logger.info(f'Model created, trainable parameters: {pick_model.model_parameters()}.') if local_master else None
 
     # build optimizer, learning rate scheduler.
@@ -67,17 +70,17 @@ def main(config: ConfigParser, local_master: bool, logger=None):
     trainer = Trainer(pick_model, optimizer,
                       config=config,
                       data_loader=train_data_loader,
+                      iob_labels_vocab_cls=train_dataset.get_iob_labels_vocab(),
                       valid_data_loader=val_data_loader,
                       lr_scheduler=lr_scheduler)
-
     trainer.train()
     logger.info('Training end...') if local_master else None
 
 
 def entry_point(config: ConfigParser):
-    '''
+    """
     entry-point function for a single worker, distributed training
-    '''
+    """
 
     local_world_size = config['local_world_size']
 

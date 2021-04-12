@@ -6,7 +6,6 @@ from typing import *
 import numpy as np
 import pandas as pd
 
-import torch
 from .span_based_f1 import SpanBasedF1Measure
 import tabulate
 

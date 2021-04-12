@@ -11,9 +11,9 @@ from torch.utils.data.dataloader import DataLoader
 from allennlp.data.dataset_readers.dataset_utils.span_utils import bio_tags_to_spans
 
 import model.pick as pick_arch_module
-from data_utils.pick_dataset import PICKDataset
-from data_utils.pick_dataset import BatchCollateFn
-from utils.util import iob_index_to_str, text_index_to_str
+from datasets.pick_dataset import PICKDataset
+from datasets.pick_dataset import BatchCollateFn
+from utils.utils import iob_index_to_str, text_index_to_str
 
 
 def main(args):
@@ -37,6 +37,7 @@ def main(args):
                                resized_image_size=(480, 960),
                                ignore_error=False,
                                training=False)
+    iob_labels_vocab_cls = test_dataset.get_iob_labels_vocab()
 
     test_data_loader = DataLoader(test_dataset, batch_size=args.bs, shuffle=False,
                                   num_workers=2, collate_fn=BatchCollateFn(training=False))
@@ -58,7 +59,7 @@ def main(args):
             output = pick_model(**input_data_item)
             logits = output['logits']  # (B, N*T, out_dim)
             new_mask = output['new_mask']
-            image_indexs = input_data_item['image_indexs']  # (B,)
+            image_ids = input_data_item['image_indexs']  # (B,)
             text_segments = input_data_item['text_segments']  # (B, num_boxes, T)
             mask = input_data_item['mask']
             # List[(List[int], torch.Tensor)]
@@ -68,11 +69,11 @@ def main(args):
                 predicted_tags.append(path)
 
             # convert iob index to iob string
-            decoded_tags_list = iob_index_to_str(predicted_tags)
+            decoded_tags_list = iob_index_to_str(predicted_tags, iob_labels_vocab_cls)
             # union text as a sequence and convert index to string
             decoded_texts_list = text_index_to_str(text_segments, mask)
 
-            for decoded_tags, decoded_texts, image_index in zip(decoded_tags_list, decoded_texts_list, image_indexs):
+            for decoded_tags, decoded_texts, image_index in zip(decoded_tags_list, decoded_texts_list, image_ids):
                 # List[ Tuple[str, Tuple[int, int]] ]
                 spans = bio_tags_to_spans(decoded_tags, [])
                 spans = sorted(spans, key=lambda x: x[1][0])

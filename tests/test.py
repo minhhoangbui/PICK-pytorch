@@ -14,10 +14,10 @@ import pandas as pd
 from model.graph import GLCN
 from parse_config import ConfigParser
 import model.pick as pick_arch
-from data_utils import pick_dataset
+from datasets import pick_dataset
 
 from model import resnet
-from data_utils.pick_dataset import PICKDataset, BatchCollateFn
+from datasets.pick_dataset import PICKDataset, BatchCollateFn
 
 
 def test_glcn_model():
@@ -56,9 +56,14 @@ def test_resnet():
 
 def test_datasets():
     filename = Path(__file__).parent.parent.joinpath('data/data_examples_root/train_samples_list.csv').as_posix()
-    dataset = PICKDataset(files_name=filename,
-                          iob_tagging_type='box_level',
-                          resized_image_size=(480, 960))
+    dataset = PICKDataset(
+        dataset_name='sroie',
+        files_name=filename,
+        iob_tagging_type='box_and_within_box_level',
+        resized_image_size=(480, 960)
+    )
+
+    exit()
 
     data_loader = DataLoader(dataset, batch_size=10, collate_fn=BatchCollateFn(), num_workers=2)
     for idx, data_item in tqdm(enumerate(data_loader)):
@@ -76,7 +81,6 @@ def test_datasets():
         print('iob_tags_label: ', iob_tags_label.shape)
         print('boxes_coordinate: ', boxes_coordinate.shape)
         print('mask: ', mask.shape)
-        print(data_item['filenames'])
         exit()
 
 
@@ -116,21 +120,30 @@ def test_model_forward():
     #                       iob_tagging_type = 'box_level',
     #                       resized_image_size = (480, 960))
 
-    data_loader = DataLoader(dataset, batch_size=2, collate_fn=BatchCollateFn(), num_workers=2)
+    data_loader = DataLoader(dataset, batch_size=1, collate_fn=BatchCollateFn(), num_workers=2)
     for idx, data_item in tqdm(enumerate(data_loader)):
         for key, tensor in data_item.items():
-            if key != 'filenames:':
-                data_item[key] = tensor.to(device)
+            if tensor is not None and isinstance(tensor, torch.Tensor):
+                data_item[key] = tensor.to(device, non_blocking=True)
         output = pick_model(**data_item)
 
         logits = output['logits']
         new_mask = output['new_mask']
-        adj = output['adj']
-        gl_loss = output['gl_loss']
-        crf_loss = output['crf_loss']
-        print(gl_loss.shape, crf_loss.shape)
-        # predicted_tags = output['predicted_tags']
-        print(logits.shape)
+        # gl_loss = output['gl_loss']
+        # crf_loss = output['crf_loss']
+        predictions = []
+        if hasattr(pick_model, 'module'):
+            best_paths = pick_model.module.decoder.crf_layer.viterbi_tags(logits, mask=new_mask,
+                                                                          logits_batch_first=True)
+        else:
+            best_paths = pick_model.decoder.crf_layer.viterbi_tags(logits, mask=new_mask,
+                                                                   logits_batch_first=True)
+        print(best_paths)
+        for path, score in best_paths:
+            predictions.append(path)
+        print(predictions)
+        exit()
+        # print(logits.shape)
 
 
 def test_read_csv():
@@ -162,6 +175,6 @@ if __name__ == '__main__':
     # test_glcn_model()
     # test_model()
     # test_resnet()
-    # test_datasets()
-    test_model_forward()
+    test_datasets()
+    # test_model_forward()
     # test_metrics()

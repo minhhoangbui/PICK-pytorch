@@ -13,8 +13,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from utils import inf_loop
 from utils.metrics import MetricTracker, SpanBasedF1MetricTracker
 from logger import TensorboardWriter
-from utils.class_utils import iob_labels_vocab_cls
-from utils.util import iob_tags_to_union_iob_tags
+from utils.utils import to_union
 
 
 class Trainer:
@@ -22,19 +21,20 @@ class Trainer:
     Trainer class
     """
 
-    def __init__(self, model, optimizer, config, data_loader,
+    def __init__(self, model, optimizer, config, data_loader, iob_labels_vocab_cls,
                  valid_data_loader=None, lr_scheduler=None, max_len_step=None):
         """
-
         :param model:
         :param optimizer:
         :param config:
         :param data_loader:
+        :param iob_labels_vocab_cls
         :param valid_data_loader:
         :param lr_scheduler:
         :param max_len_step:  controls number of batches(steps) in each epoch.
         """
         self.config = config
+        self.iob_labels_vocab_cls = iob_labels_vocab_cls
         self.distributed = config['distributed']
         if self.distributed:
             self.local_master = (config['local_rank'] == 0)
@@ -125,6 +125,7 @@ class Trainer:
             dist.barrier()  # Syncing machines before training
 
         not_improved_count = 0
+        val_result_dict = None
         for epoch in range(self.start_epoch, self.epochs + 1):
 
             # ensure distribute worker sample different data,
@@ -313,6 +314,7 @@ class Trainer:
                 else:
                     best_paths = self.model.decoder.crf_layer.viterbi_tags(logits, mask=new_mask,
                                                                            logits_batch_first=True)
+
                 predicted_tags = []
                 for path, score in best_paths:
                     predicted_tags.append(path)
@@ -329,7 +331,7 @@ class Trainer:
 
                 golden_tags = input_data_item['iob_tags_label']
                 mask = input_data_item['mask']
-                union_iob_tags = iob_tags_to_union_iob_tags(golden_tags, mask)
+                union_iob_tags = to_union(golden_tags, mask, self.iob_labels_vocab_cls)
 
                 if self.distributed:
                     dist.barrier()  #

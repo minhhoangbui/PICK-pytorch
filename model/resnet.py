@@ -40,14 +40,14 @@ def conv3x3(in_planes, out_planes, stride=1):
 class BasicBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None):
+    def __init__(self, inplanes, planes, stride=1, down_sample=None):
         super(BasicBlock, self).__init__()
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = nn.BatchNorm2d(planes)
         self.relu = nn.ReLU(inplace=True)
         self.conv2 = conv3x3(planes, planes)
         self.bn2 = nn.BatchNorm2d(planes)
-        self.downsample = downsample
+        self.down_sample = down_sample
         self.stride = stride
 
     def forward(self, x):
@@ -60,8 +60,8 @@ class BasicBlock(nn.Module):
         out = self.conv2(out)
         out = self.bn2(out)
 
-        if self.downsample is not None:
-            residual = self.downsample(x)
+        if self.down_sample is not None:
+            residual = self.down_sample(x)
 
         out += residual
         out = self.relu(out)
@@ -72,7 +72,7 @@ class BasicBlock(nn.Module):
 class Bottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None):
+    def __init__(self, inplanes, planes, stride=1, down_sample=None):
         super(Bottleneck, self).__init__()
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, stride=stride, bias=False)  # change
         self.bn1 = nn.BatchNorm2d(planes)
@@ -82,7 +82,7 @@ class Bottleneck(nn.Module):
         self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False)
         self.bn3 = nn.BatchNorm2d(planes * 4)
         self.relu = nn.ReLU(inplace=True)
-        self.downsample = downsample
+        self.down_sample = down_sample
         self.stride = stride
 
     def forward(self, x):
@@ -99,8 +99,8 @@ class Bottleneck(nn.Module):
         out = self.conv3(out)
         out = self.bn3(out)
 
-        if self.downsample is not None:
-            residual = self.downsample(x)
+        if self.down_sample is not None:
+            residual = self.down_sample(x)
 
         out += residual
         out = self.relu(out)
@@ -139,15 +139,15 @@ class ResNet(nn.Module):
                 m.bias.data.zero_()
 
     def _make_layer(self, block, planes, blocks, stride=1):
-        downsample = None
+        down_sample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
-            downsample = nn.Sequential(
+            down_sample = nn.Sequential(
                 nn.Conv2d(self.inplanes, planes * block.expansion,
                           kernel_size=1, stride=stride, bias=False),
                 nn.BatchNorm2d(planes * block.expansion),
             )
 
-        layers = [block(self.inplanes, planes, stride, downsample)]
+        layers = [block(self.inplanes, planes, stride, down_sample)]
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
             layers.append(block(self.inplanes, planes))
@@ -176,6 +176,7 @@ def resnet18(pretrained=False, output_channels=512):
     """Constructs a ResNet-18 model.
     Args:
       pretrained (bool): If True, returns a model pre-trained on ImageNet
+      output_channels
     """
     model = ResNet(BasicBlock, [2, 2, 2, 2], output_channels=output_channels)
     if pretrained:
@@ -187,6 +188,7 @@ def resnet34(pretrained=False, output_channels=512):
     """Constructs a ResNet-34 model.
     Args:
       pretrained (bool): If True, returns a model pre-trained on ImageNet
+      output_channels
     """
     model = ResNet(BasicBlock, [3, 4, 6, 3], output_channels=output_channels)
     if pretrained:
@@ -198,6 +200,7 @@ def resnet50(pretrained=False, output_channels=512):
     """Constructs a ResNet-50 model.
     Args:
       pretrained (bool): If True, returns a model pre-trained on ImageNet
+      output_channels
     """
     model = ResNet(Bottleneck, [3, 4, 6, 3], output_channels=output_channels)
     if pretrained:
@@ -209,6 +212,7 @@ def resnet101(pretrained=False, output_channels=512):
     """Constructs a ResNet-101 model.
     Args:
       pretrained (bool): If True, returns a model pre-trained on ImageNet
+      output_channels
     """
     model = ResNet(Bottleneck, [3, 4, 23, 3], output_channels=output_channels)
     if pretrained:
@@ -220,6 +224,7 @@ def resnet152(pretrained=False, output_channels=512):
     """Constructs a ResNet-152 model.
     Args:
       pretrained (bool): If True, returns a model pre-trained on ImageNet
+      output_channels
     """
     model = ResNet(Bottleneck, [3, 8, 36, 3], output_channels=output_channels)
     if pretrained:

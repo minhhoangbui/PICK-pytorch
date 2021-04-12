@@ -11,21 +11,20 @@ import numpy as np
 from .encoder import Encoder
 from .graph import GLCN
 from .decoder import Decoder
-from utils.class_utils import keys_vocab_cls, iob_labels_vocab_cls
+from utils.class_utils import keys_vocab_cls
 
 
 class PICKModel(nn.Module):
-    word_emb = None
-    encoder = None
-    graph = None
-    decoder = None
 
     def __init__(self, **kwargs):
         super().__init__()
+        self.iob_labels_vocab_cls = kwargs['iob_labels_vocab_cls']
         embedding_kwargs = kwargs['embedding_kwargs']
         encoder_kwargs = kwargs['encoder_kwargs']
         graph_kwargs = kwargs['graph_kwargs']
         decoder_kwargs = kwargs['decoder_kwargs']
+        self.word_emb = self.encoder = self.graph = self.decoder = None
+
         self.make_model(embedding_kwargs, encoder_kwargs, graph_kwargs, decoder_kwargs)
 
     def make_model(self, embedding_kwargs, encoder_kwargs, graph_kwargs, decoder_kwargs):
@@ -46,9 +45,9 @@ class PICKModel(nn.Module):
             decoder_kwargs['mlp_kwargs']['in_dim'] = decoder_kwargs['bilstm_kwargs']['hidden_size'] * 2
         else:
             decoder_kwargs['mlp_kwargs']['in_dim'] = decoder_kwargs['bilstm_kwargs']['hidden_size']
-        decoder_kwargs['mlp_kwargs']['out_dim'] = len(iob_labels_vocab_cls)
-        decoder_kwargs['crf_kwargs']['num_tags'] = len(iob_labels_vocab_cls)
-        self.decoder = Decoder(**decoder_kwargs)
+        decoder_kwargs['mlp_kwargs']['out_dim'] = len(self.iob_labels_vocab_cls)
+        decoder_kwargs['crf_kwargs']['num_tags'] = len(self.iob_labels_vocab_cls)
+        self.decoder = Decoder(self.iob_labels_vocab_cls, **decoder_kwargs)
 
     @staticmethod
     def _aggregate_avg_pooling(inputs, text_mask):
@@ -131,15 +130,16 @@ class PICKModel(nn.Module):
         # (B, N, D)
         x_gcn = x_gcn.reshape(B, N, -1)
         # (B, N, D), (B, N, N), (B,)
-        x_gcn, soft_adj, gl_loss = self.graph(x_gcn, relation_features, init_adj, boxes_num)
-        adj = soft_adj * init_adj
+        x_gcn, gl_loss = self.graph(x_gcn, relation_features, init_adj, boxes_num)
+        # adj = soft_adj * init_adj
 
         # Decoder module #
-        logits, new_mask, log_likelihood = self.decoder(x.reshape(B, N, T, -1), x_gcn, mask, text_length,
-                                                        iob_tags_label)
+        logits, new_mask, log_likelihood = self.decoder(x.reshape(B, N, T, -1), x_gcn,
+                                                        mask, text_length, iob_tags_label)
         # Forward End #
 
-        output = {"logits": logits, "new_mask": new_mask, "adj": adj}
+        # output = {"logits": logits, "new_mask": new_mask, "adj": adj}
+        output = {"logits": logits, "new_mask": new_mask}
 
         if self.training:
             output['gl_loss'] = gl_loss

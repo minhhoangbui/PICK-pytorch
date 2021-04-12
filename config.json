@@ -57,7 +57,8 @@
     "train_dataset": {
         "type": "PICKDataset",
         "args": {
-            "files_name":"/home/hoangbm/PICK-pytorch/data/data_examples_root/train_samples_list.csv",
+            "dataset_name": "bizi",
+            "files_name":"/home/hoangbm/ner_data/bizi/train/train_list.csv",
             "boxes_and_transcripts_folder":"boxes_and_transcripts",
             "images_folder":"images",
             "entities_folder":"entities",
@@ -69,7 +70,8 @@
     "validation_dataset": {
         "type": "PICKDataset",
         "args": {
-            "files_name":"/home/hoangbm/PICK-pytorch/data/test_data_example/test_samples_list.csv",
+            "dataset_name": "bizi",
+            "files_name":"/home/hoangbm/ner_data/bizi/train/test_list.csv",
             "boxes_and_transcripts_folder":"boxes_and_transcripts",
             "images_folder":"images",
             "entities_folder":"entities",
@@ -81,7 +83,7 @@
     "train_data_loader": {
         "type": "DataLoader",
         "args":{
-            "batch_size": 4,
+            "batch_size": 2,
             "shuffle": true,
             "drop_last": true,
             "num_workers": 8,
@@ -116,7 +118,7 @@
     },
 
     "trainer": {
-        "epochs": 200,
+        "epochs": 100,
         "gl_loss_lambda": 0.01,
         "log_step_interval": 10,
         "val_step_interval": 50,

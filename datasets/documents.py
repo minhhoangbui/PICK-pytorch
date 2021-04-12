@@ -13,23 +13,41 @@ from pathlib import Path
 from torchtext.data import Field, RawField
 import numpy as np
 
-from utils.entities_list import Entities_list
-from utils.class_utils import keys_vocab_cls, iob_labels_vocab_cls, entities_vocab_cls
+from utils.class_utils import keys_vocab_cls, ClassVocab, entities2iob_labels
 
 MAX_BOXES_NUM = 70  # limit max number boxes of every documents
 MAX_TRANSCRIPT_LEN = 50  # limit max length text of every box
 
-# text string label converter
-TextSegmentsField = Field(sequential=True, use_vocab=True, include_lengths=True, batch_first=True)
-TextSegmentsField.vocab = keys_vocab_cls
-# iob string label converter
-IOBTagsField = Field(sequential=True, is_target=True, use_vocab=True, batch_first=True)
-IOBTagsField.vocab = iob_labels_vocab_cls
+
+sroie_entities_list = [
+    "company",
+    "address",
+    "date",
+    "total"
+]
+
+bizi_entities_list = [
+    'buyer_address_line', 'issued_date', 'item_name',
+    'total_amount_with_vat_in_words', 'invoice_number', 'buyer_legal_name',
+    'vat_percentage', 'seller_address_line', 'template_code',
+    'payment_method_name', 'total_price_before_vat', 'total_vat_amount',
+    'total_amount_with_vat', 'invoice_series', 'total_amount_without_vat',
+    'seller_legal_name', 'seller_tax_code', 'buyer_tax_code', 'unit',
+    'unit_price', 'vat_amount', 'total_price_after_vat', 'discount_amount',
+    'quantity', 'item_code', 'buyer_display_name'
+]
 
 
 class Document:
-    def __init__(self, boxes_and_transcripts_file: Path, image_file: Path,
-                 resized_image_size: Tuple[int, int] = (480, 960),
+    # text string label converter
+    TextSegmentsField = Field(sequential=True, use_vocab=True, include_lengths=True, batch_first=True)
+    TextSegmentsField.vocab = keys_vocab_cls
+
+    # iob string label converter
+    IOBTagsField = Field(sequential=True, is_target=True, use_vocab=True, batch_first=True)
+
+    def __init__(self, boxes_and_transcripts_file: Path, image_file: Path, entities_list: List[str],
+                 resized_image_size: Tuple[int, int] = (480, 960), dataset_name: str = 'sroie',
                  iob_tagging_type: str = 'box_level', entities_file: Path = None, training: bool = True,
                  image_index=None):
         """
@@ -44,11 +62,17 @@ class Document:
         and entities_file must be set.
         :param image_index: image index, used to get image file name
         """
+        iob_tags_label = None
+        self.dataset_name = dataset_name
         self.resized_image_size = resized_image_size
         self.training = training
         assert iob_tagging_type in ['box_level', 'document_level', 'box_and_within_box_level'], \
             'iob tagging type {} is not supported'.format(iob_tagging_type)
         self.iob_tagging_type = iob_tagging_type
+
+        self.entities_list = entities_list
+        Document.IOBTagsField.vocab = ClassVocab(entities2iob_labels(self.entities_list),
+                                                 specials_first=False)
 
         # For easier debug:
         # we will know what we are running on.
@@ -60,7 +84,6 @@ class Document:
             # from boxes_and_transcripts tsv file
             # data format as [(index, points, transcription, entity_type)...]
             if self.training:
-                # boxes_and_transcripts_data = [(index, [x1, y1, ...], transcript, entity_type), ...]
                 boxes_and_transcripts_data = read_gt_file_with_box_entity_type(boxes_and_transcripts_file.as_posix())
             else:
                 boxes_and_transcripts_data = read_ocr_file_without_box_entity_type(
@@ -114,7 +137,7 @@ class Document:
                 box_i = boxes[i]
                 transcript_i = transcripts[i]
 
-                # get resized images's boxes coordinate, used to ROIAlign in Encoder layer
+                # get resized image's boxes coordinate, used to ROIAlign in Encoder layer
                 resized_box_i = [int(np.round(pos * x_scale)) if i % 2 == 0 else int(np.round(pos * y_scale))
                                  for i, pos in enumerate(box_i)]
 
@@ -141,24 +164,28 @@ class Document:
                 if self.iob_tagging_type == 'box_level':
                     # convert transcript of every boxes to iob label, using entity type of corresponding box
                     iob_tags_label = text2iob_label_with_box_level_match(box_entity_types[:boxes_num],
-                                                                         transcripts[:boxes_num])
+                                                                         transcripts[:boxes_num],
+                                                                         self.entities_list)
                 elif self.iob_tagging_type == 'document_level':
                     # convert transcripts to iob label using document level tagging match method, all transcripts will
                     # be concatenated as a sequences
-                    iob_tags_label = text2iob_label_with_document_level_exactly_match(transcripts[:boxes_num], entities)
-
+                    iob_tags_label = text2iob_label_with_document_level_exactly_match(transcripts[:boxes_num], entities,
+                                                                                      self.entities_list)
                 elif self.iob_tagging_type == 'box_and_within_box_level':
-                    # perform exactly tagging within specific box, box_level_entities parames will
-                    # perform box level tagging.
+                    if self.dataset_name == 'bizi':
+                        box_label_entities = ['buyer_address_line', 'seller_address_line']
+                    else:
+                        box_label_entities = ['address']
                     iob_tags_label = text2iob_label_with_box_and_within_box_exactly_level(box_entity_types[:boxes_num],
                                                                                           transcripts[:boxes_num],
-                                                                                          entities, ['address'])
+                                                                                          entities,
+                                                                                          box_label_entities,
+                                                                                          self.entities_list)
 
-                iob_tags_label = IOBTagsField.process(iob_tags_label)[:, :transcript_len].numpy()
-                # box_entity_types = [entities_vocab_cls.stoi[t] for t in box_entity_types[:boxes_num]]
+                iob_tags_label = Document.IOBTagsField.process(iob_tags_label)[:, :transcript_len].numpy()
 
             # texts shape is (num_texts, max_texts_len), texts_len shape is (num_texts,)
-            texts, texts_len = TextSegmentsField.process(text_segments)
+            texts, texts_len = Document.TextSegmentsField.process(text_segments)
             texts = texts[:, :transcript_len].numpy()
             texts_len = np.clip(texts_len.numpy(), 0, transcript_len)
             text_segments = (texts, texts_len)
@@ -167,14 +194,14 @@ class Document:
                 mask[i, :texts_len[i]] = 1
 
             self.whole_image = RawField().preprocess(image)
-            self.text_segments = TextSegmentsField.preprocess(text_segments)  # (text, texts_len)
+            self.text_segments = Document.TextSegmentsField.preprocess(text_segments)  # (text, texts_len)
             self.boxes_coordinate = RawField().preprocess(resized_boxes)
             self.relation_features = RawField().preprocess(relation_features)
             self.mask = RawField().preprocess(mask)
             self.boxes_num = RawField().preprocess(boxes_num)
             self.transcript_len = RawField().preprocess(transcript_len)  # max transcript len of current document
             if self.training:
-                self.iob_tags_label = IOBTagsField.preprocess(iob_tags_label)
+                self.iob_tags_label = Document.IOBTagsField.preprocess(iob_tags_label)
             else:
                 self.image_index = RawField().preprocess(image_index)
 
@@ -300,16 +327,19 @@ def normalize_relation_features(feat: np.ndarray, width: int, height: int):
     return feat
 
 
-def text2iob_label_with_box_level_match(annotation_box_types: List[str], transcripts: List[str]) -> List[List[str]]:
+def text2iob_label_with_box_level_match(annotation_box_types: List[str],
+                                        transcripts: List[str],
+                                        entities_list: List[str]) -> List[List[str]]:
     """
      convert transcripts to iob label using box level tagging match method
     :param annotation_box_types: each transcripts box belongs to the corresponding entity types
     :param transcripts: transcripts of documents
+    :param entities_list:
     :return:
     """
     tags = []
     for entity_type, transcript in zip(annotation_box_types, transcripts):
-        if entity_type in Entities_list:
+        if entity_type in entities_list:
             if len(transcript) == 1:
                 tags.append(['B-{}'.format(entity_type)])
             else:
@@ -323,12 +353,14 @@ def text2iob_label_with_box_level_match(annotation_box_types: List[str], transcr
 
 
 def text2iob_label_with_document_level_exactly_match(transcripts: List[str],
-                                                     exactly_entities_label: Dict) -> List[List[str]]:
+                                                     exactly_entities_label: Dict,
+                                                     entities_list: List[str]) -> List[List[str]]:
     """
      convert transcripts to iob label using document level tagging match method,
      all transcripts will be concatenated as a sequences.
     :param transcripts: transcripts of documents
     :param exactly_entities_label: exactly entity type and entity value of documents
+    :param entities_list
     :return:
     """
     concatenated_sequences = []
@@ -339,7 +371,7 @@ def text2iob_label_with_document_level_exactly_match(transcripts: List[str],
 
     result_tags = ['O'] * len(concatenated_sequences)
     for entity_type, entity_value in exactly_entities_label.items():
-        if entity_type not in Entities_list:
+        if entity_type not in entities_list:
             continue
         (src_seq, src_idx), (tgt_seq, _) = preprocess_transcripts(concatenated_sequences), preprocess_transcripts(
             entity_value)
@@ -366,7 +398,8 @@ def text2iob_label_with_document_level_exactly_match(transcripts: List[str],
 def text2iob_label_with_box_and_within_box_exactly_level(annotation_box_types: List[str],
                                                          transcripts: List[str],
                                                          exactly_entities_label: Dict[str, str],
-                                                         box_level_entities: List[str]) -> List[List[str]]:
+                                                         box_level_entities: List[str],
+                                                         entities_list: List[str]) -> List[List[str]]:
     """
      box_level_entities will perform box level tagging, others will perform exactly matching within specific box.
     :param annotation_box_types: each transcripts box belongs to the corresponding entity types
@@ -374,6 +407,7 @@ def text2iob_label_with_box_and_within_box_exactly_level(annotation_box_types: L
     :param exactly_entities_label: exactly entity type and entity value of documents
     :param box_level_entities: using box level label tagging, this result is same as
                     function of text2iob_label_with_box_level_match
+    :param entities_list
     :return:
     """
 
@@ -388,8 +422,9 @@ def text2iob_label_with_box_and_within_box_exactly_level(annotation_box_types: L
         matched = False
 
         # Preprocess remove the punctuations and whitespaces.
-        (src_seq, src_idx), (tgt_seq, _) = preprocess_transcripts(transcript), preprocess_transcripts(
-            entity_exactly_value)
+        (src_seq, src_idx), (tgt_seq, _) = preprocess_transcripts(transcript), \
+                                                preprocess_transcripts(entity_exactly_value)
+
         src_len, tgt_len = len(src_seq), len(tgt_seq)
         if tgt_len == 0:
             return matched, None
@@ -408,7 +443,7 @@ def text2iob_label_with_box_and_within_box_exactly_level(annotation_box_types: L
     tags = []
     for entity_type, transcript in zip(annotation_box_types, transcripts):
         entity_type = entity_type.strip()
-        if entity_type in Entities_list:
+        if entity_type in entities_list:
 
             matched, resulted_tag = False, None
             if entity_type not in box_level_entities:
@@ -429,8 +464,8 @@ def text2iob_label_with_box_and_within_box_exactly_level(annotation_box_types: L
 
 def preprocess_transcripts(transcripts: List[str]):
     """
-    preprocess texts into separated word-level list, this is helpful to matching tagging label between source and target label,
-    e.g. source: xxxx hello ! world xxxx  target: xxxx hello world xxxx,
+    preprocess texts into separated word-level list, this is helpful to matching tagging label between source and target
+    label, e.g. source: xxxx hello ! world xxxx  target: xxxx hello world xxxx,
     we want to match 'hello ! world' with 'hello world' to decrease the impact of ocr bad result.
     :param transcripts:
     :return: seq: the cleaned sequence, idx: the corresponding indices.

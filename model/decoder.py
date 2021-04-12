@@ -10,7 +10,7 @@ import torch.nn as nn
 from torch import Tensor
 
 from .crf import ConditionalRandomField
-from utils.class_utils import keys_vocab_cls, iob_labels_vocab_cls
+from utils.class_utils import keys_vocab_cls
 
 logger = logging.getLogger('PICK')
 
@@ -36,7 +36,7 @@ class MLPLayer(nn.Module):
         layers = []
         activation_layer = {
             'relu': nn.ReLU(),
-            'leaky_relu': nn.LeakyReLU
+            'leaky_relu': nn.LeakyReLU()
         }
 
         if hidden_dims:
@@ -72,13 +72,13 @@ class BiLSTMLayer(nn.Module):
 
     @staticmethod
     def sort_tensor(x: torch.Tensor, length: torch.Tensor, h_0: torch.Tensor = None, c_0: torch.Tensor = None):
-        sorted_lenght, sorted_order = torch.sort(length, descending=True)
+        sorted_length, sorted_order = torch.sort(length, descending=True)
         _, invert_order = sorted_order.sort(0, descending=False)
         if h_0 is not None:
             h_0 = h_0[:, sorted_order, :]
         if c_0 is not None:
             c_0 = c_0[:, sorted_order, :]
-        return x[sorted_order], sorted_lenght, invert_order, h_0, c_0
+        return x[sorted_order], sorted_length, invert_order, h_0, c_0
 
     def forward(self, x_seq: torch.Tensor,
                 lengths: torch.Tensor,
@@ -106,13 +106,13 @@ class BiLSTMLayer(nn.Module):
 
 
 class UnionLayer(nn.Module):
-
-    def __init__(self):
-        super().__init__()
+    def __init__(self, iob_labels_vocab_cls):
+        super(UnionLayer, self).__init__()
+        self.iob_labels_vocab_cls = iob_labels_vocab_cls
 
     def forward(self, x: Tensor, x_gcn: Tensor, mask: Tensor, length: Tensor, tags):
         """
-        For a document, we merge all non-paddding (valid) x and x_gcn value together in a document-level format,
+        For a document, we merge all non-padding (valid) x and x_gcn value together in a document-level format,
         then feed it into crf layer.
         :param x: set of nodes, the output of encoder, (B, N, T, D)
         :param x_gcn: node embedding, the output of graph module, (B, N, D)
@@ -120,10 +120,10 @@ class UnionLayer(nn.Module):
         :param length: the length of every segments (boxes) of documents, (B, N)
         :param tags: IBO label for every segments of documents, (B, N, T)
         :return:
-                new_x, (B, max_doc_seq_len, D)
-                new_mask, (B, max_doc_seq_len)
-                doc_seq_len, (B,)
-                new_tag, (B, max_doc_seq_len)
+            new_x, (B, max_doc_seq_len, D)
+            new_mask, (B, max_doc_seq_len)
+            doc_seq_len, (B,)
+            new_tag, (B, max_doc_seq_len)
         """
         B, N, T, D = x.shape
         x = x.reshape(B, N * T, -1)
@@ -150,10 +150,11 @@ class UnionLayer(nn.Module):
         new_x = torch.zeros_like(x, device=x.device)
         # (B, N*T)
         new_mask = torch.zeros_like(mask, device=x.device)
+        new_tag = None
         if self.training:
             # (B, N*T)
             tags = tags.reshape(B, N * T)
-            new_tag = torch.full_like(tags, iob_labels_vocab_cls.stoi['<pad>'], device=x.device)
+            new_tag = torch.full_like(tags, self.iob_labels_vocab_cls.stoi['<pad>'], device=x.device)
             new_tag = new_tag[:, :max_doc_seq_len]
 
         # merge all non-padding value together in document-level
@@ -182,9 +183,9 @@ class UnionLayer(nn.Module):
 
 class Decoder(nn.Module):
 
-    def __init__(self, bilstm_kwargs, mlp_kwargs, crf_kwargs):
+    def __init__(self, iob_labels_vocab_cls, bilstm_kwargs, mlp_kwargs, crf_kwargs):
         super().__init__()
-        self.union_layer = UnionLayer()
+        self.union_layer = UnionLayer(iob_labels_vocab_cls)
         self.bilstm_layer = BiLSTMLayer(bilstm_kwargs, mlp_kwargs)
         self.crf_layer = ConditionalRandomField(**crf_kwargs)
 

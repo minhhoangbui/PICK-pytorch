@@ -2,7 +2,6 @@
 # @Author: Wenwen Yu
 # @Created Time: 7/7/2020 8:34 PM
 
-from typing import *
 import math
 
 import torch
@@ -10,7 +9,7 @@ import torch.nn as nn
 from torch import Tensor
 import torch.nn.functional as F
 
-from data_utils import documents
+from datasets import documents
 
 
 class GraphLearningLayer(nn.Module):
@@ -20,9 +19,9 @@ class GraphLearningLayer(nn.Module):
         self.learn_w = nn.Parameter(torch.empty(learning_dim))
         self.gamma = gamma
         self.eta = eta
-        self.inint_parameters()
+        self.init_parameters()
 
-    def inint_parameters(self):
+    def init_parameters(self):
         nn.init.uniform_(self.learn_w, a=0, b=1)
 
     def forward(self, x: Tensor, adj: Tensor, box_num: Tensor = None):
@@ -32,8 +31,8 @@ class GraphLearningLayer(nn.Module):
         :param adj: init adj, (B, N, N, default is 1)
         :param box_num: (B, 1)
         :return:
-                out, soft adj matrix
-                gl loss
+            out, soft adj matrix
+            gl loss
         """
         B, N, D = x.shape
 
@@ -85,7 +84,8 @@ class GraphLearningLayer(nn.Module):
         max_len = documents.MAX_BOXES_NUM
 
         # (B, N)
-        mask = torch.arange(0, max_len, device=box_num.device).expand((box_num.shape[0], max_len))
+        mask = torch.arange(0, max_len, device=box_num.device).\
+            expand((box_num.shape[0], max_len))
 
         # (B, N)
         box_num = box_num.expand_as(mask)
@@ -160,7 +160,7 @@ class GraphLearningLayer(nn.Module):
         # (B,)
         dist_loss = torch.sum(dist_loss, dim=(1, 2)) * box_num_div.squeeze(-1)
         # (B,)
-        f_norm = torch.norm(adj, dim=(1, 2)) # remove square operation duo to it can cause nan loss.
+        f_norm = torch.norm(adj, dim=(1, 2))  # remove square operation duo to it can cause nan loss.
 
         gl_loss = dist_loss + self.gamma * f_norm
         return gl_loss
@@ -181,7 +181,7 @@ class GCNLayer(nn.Module):
         self.bias_h = nn.Parameter(torch.empty(in_dim))
         self.w_node = nn.Parameter(torch.empty(in_dim, out_dim))
 
-        self.inint_parameters()
+        self.init_parameters()
 
     def init_parameters(self):
         nn.init.kaiming_uniform_(self.w_alpha, a=math.sqrt(5))
@@ -258,14 +258,13 @@ class GLCN(nn.Module):
 
         self.alpha_transform = nn.Linear(6, in_dim, bias=False)
 
-    def forward(self, x: Tensor, rel_features: Tensor, adj: Tensor, box_num: Tensor, **kwargs):
+    def forward(self, x: Tensor, rel_features: Tensor, adj: Tensor, box_num: Tensor):
         """
 
         :param x: nodes embedding, (B*N, D)
         :param rel_features: relation embedding, (B, N, N, 6)
         :param adj: default adjacent matrix, (B, N, N)
         :param box_num: (B, 1)
-        :param kwargs:
         :return:
         """
         # relation features embedding, (B, N, N, in_dim)
@@ -273,7 +272,7 @@ class GLCN(nn.Module):
 
         soft_adj, gl_loss = self.gl_layer(x, adj, box_num)
         adj = adj * soft_adj
-        for i, gcn_layer in enumerate(self.gcn):
-            x, alpha = gcn_layer(x, alpha, adj, box_num)
+        for gcn_layer in self.gcn:
+            x, alpha = gcn_layer(x, alpha, adj)
 
-        return x, soft_adj, gl_loss
+        return x, gl_loss

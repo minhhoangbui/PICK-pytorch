@@ -56,9 +56,6 @@ class SpanBasedF1Measure(Metric):
         ----------
         vocab : ``Vocabulary``, required.
             A vocabulary containing the tag namespace.
-        tag_namespace : str, required.
-            This metric assumes that a BIO format is used in which the
-            labels are of the format: ["B-LABEL", "I-LABEL"].
         ignore_classes : List[str], optional.
             Span labels which will be ignored when computing span metrics.
             A "span label" is the part that comes after the BIO label, so it
