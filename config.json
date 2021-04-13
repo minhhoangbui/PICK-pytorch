@@ -57,8 +57,8 @@
     "train_dataset": {
         "type": "PICKDataset",
         "args": {
-            "dataset_name": "bizi",
-            "files_name":"/home/hoangbm/ner_data/bizi/train/train_list.csv",
+            "dataset_name": "sroie",
+            "files_name":"/home/hoangbm/ner_data/sroie/train/train_list.csv",
             "boxes_and_transcripts_folder":"boxes_and_transcripts",
             "images_folder":"images",
             "entities_folder":"entities",
@@ -70,8 +70,8 @@
     "validation_dataset": {
         "type": "PICKDataset",
         "args": {
-            "dataset_name": "bizi",
-            "files_name":"/home/hoangbm/ner_data/bizi/train/test_list.csv",
+            "dataset_name": "sroie",
+            "files_name":"/home/hoangbm/ner_data/sroie/test/test_list.csv",
             "boxes_and_transcripts_folder":"boxes_and_transcripts",
             "images_folder":"images",
             "entities_folder":"entities",
@@ -93,7 +93,7 @@
     "val_data_loader": {
           "type": "DataLoader",
           "args":{
-              "batch_size": 4,
+              "batch_size": 2,
               "shuffle": false,
               "drop_last": false,
               "num_workers": 8,
@@ -123,7 +123,7 @@
         "log_step_interval": 10,
         "val_step_interval": 50,
 
-        "save_dir": "saved/",
+        "save_dir": "/tmp/PICK/",
         "save_period": 20,
         "log_verbosity": 2,
 
