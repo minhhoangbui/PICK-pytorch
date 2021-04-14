@@ -7,7 +7,6 @@ from __future__ import division
 from __future__ import print_function
 
 import math
-import torch
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 
@@ -32,7 +31,7 @@ model_urls = {
 
 
 def conv3x3(in_planes, out_planes, stride=1):
-    "3x3 convolution with padding"
+    """3x3 convolution with padding"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
                      padding=1, bias=False)
 
@@ -122,8 +121,6 @@ class ResNet(nn.Module):
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
-        # it is slightly better whereas slower to set stride = 1
-        # self.layer4 = self._make_layer(block, 512, layers[3], stride=1)
 
         self.conv2 = nn.Conv2d(512 * block.expansion, output_channels, kernel_size=3, stride=1, padding=1,
                                bias=False)  # add
@@ -172,37 +169,34 @@ class ResNet(nn.Module):
         return x
 
 
-def resnet18(pretrained=False, output_channels=512):
+def resnet18(pretrained=False, **kwargs):
     """Constructs a ResNet-18 model.
     Args:
       pretrained (bool): If True, returns a model pre-trained on ImageNet
-      output_channels
     """
-    model = ResNet(BasicBlock, [2, 2, 2, 2], output_channels=output_channels)
+    model = ResNet(BasicBlock, [2, 2, 2, 2], output_channels=kwargs['output_channels'])
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
     return model
 
 
-def resnet34(pretrained=False, output_channels=512):
+def resnet34(pretrained=False, **kwargs):
     """Constructs a ResNet-34 model.
     Args:
       pretrained (bool): If True, returns a model pre-trained on ImageNet
-      output_channels
     """
-    model = ResNet(BasicBlock, [3, 4, 6, 3], output_channels=output_channels)
+    model = ResNet(BasicBlock, [3, 4, 6, 3], output_channels=kwargs['output_channels'])
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet34']))
     return model
 
 
-def resnet50(pretrained=False, output_channels=512):
+def resnet50(pretrained=False, **kwargs):
     """Constructs a ResNet-50 model.
     Args:
       pretrained (bool): If True, returns a model pre-trained on ImageNet
-      output_channels
     """
-    model = ResNet(Bottleneck, [3, 4, 6, 3], output_channels=output_channels)
+    model = ResNet(Bottleneck, [3, 4, 6, 3], output_channels=kwargs['output_channels'])
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
     return model

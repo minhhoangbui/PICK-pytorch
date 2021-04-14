@@ -10,10 +10,10 @@ import torch
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-from utils import inf_loop
-from utils.metrics import MetricTracker, SpanBasedF1MetricTracker
-from logger import TensorboardWriter
-from utils.utils import to_union
+from src.utils import inf_loop
+from src.utils.metrics import MetricTracker, SpanBasedF1MetricTracker
+from src.logger import TensorboardWriter
+from src.utils.utils import to_union
 
 
 class Trainer:

@@ -13,7 +13,7 @@ from pathlib import Path
 from torchtext.data import Field, RawField
 import numpy as np
 
-from utils.class_utils import keys_vocab_cls, ClassVocab, entities2iob_labels
+from src.utils.class_utils import keys_vocab_cls, ClassVocab, entities2iob_labels
 
 MAX_BOXES_NUM = 70  # limit max number boxes of every documents
 MAX_TRANSCRIPT_LEN = 50  # limit max length text of every box

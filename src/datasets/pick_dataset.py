@@ -13,9 +13,9 @@ from torch.utils import data
 from torchvision import transforms
 import pandas as pd
 
-from datasets import documents
-from datasets.documents import Document
-from utils.class_utils import ClassVocab, entities2iob_labels
+from src.datasets import documents
+from src.datasets.documents import Document
+from src.utils.class_utils import ClassVocab, entities2iob_labels
 
 
 sroie_entities_list = [
@@ -74,7 +74,6 @@ class PICKDataset(data.Dataset):
         self.entities_list = eval(f'{dataset_name}_entities_list')
         self.iob_labels_vocab_cls = ClassVocab(entities2iob_labels(self.entities_list),
                                                specials_first=False)
-        print(len(self.iob_labels_vocab_cls))
 
         if self.training:  # used for train and validation mode
             self.files_name = Path(files_name)

@@ -10,10 +10,10 @@ from pathlib import Path
 from torch.utils.data.dataloader import DataLoader
 from allennlp.data.dataset_readers.dataset_utils.span_utils import bio_tags_to_spans
 
-import model.pick as pick_arch_module
-from datasets.pick_dataset import PICKDataset
-from datasets.pick_dataset import BatchCollateFn
-from utils.utils import iob_index_to_str, text_index_to_str
+import src.model.pick as pick_arch_module
+from src.datasets.pick_dataset import PICKDataset
+from src.datasets.pick_dataset import BatchCollateFn
+from src.utils import iob_index_to_str, text_index_to_str
 
 
 def main(args):

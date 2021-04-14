@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from torchvision.ops import roi_align
 from torchvision.ops import roi_pool
 
-from . import resnet
+from .backbones import ImageBackboneFactory
 
 
 class Encoder(nn.Module):
@@ -20,12 +20,13 @@ class Encoder(nn.Module):
                  char_embedding_dim: int,
                  out_dim: int,
                  image_feature_dim: int = 512,
-                 nheaders: int = 8,
-                 nlayers: int = 6,
+                 n_headers: int = 8,
+                 n_layers: int = 6,
                  feedforward_dim: int = 2048,
                  dropout: float = 0.1,
                  max_len: int = 100,
                  image_encoder: str = 'resnet50',
+                 imagenet_pretrained: bool = False,
                  roi_pooling_mode: str = 'roi_align',
                  roi_pooling_size: Tuple[int, int] = (7, 7)):
         """
@@ -33,12 +34,13 @@ class Encoder(nn.Module):
         :param char_embedding_dim:
         :param out_dim:
         :param image_feature_dim:
-        :param nheaders:
-        :param nlayers:
+        :param n_headers:
+        :param n_layers:
         :param feedforward_dim:
         :param dropout:
         :param max_len:
         :param image_encoder:
+        :param imagenet_pretrained:
         :param roi_pooling_mode:
         :param roi_pooling_size:
         """
@@ -52,23 +54,12 @@ class Encoder(nn.Module):
         self.roi_pooling_size = tuple(roi_pooling_size)  # (h, w)
 
         transformer_encoder_layer = nn.TransformerEncoderLayer(d_model=char_embedding_dim,
-                                                               nhead=nheaders,
+                                                               nhead=n_headers,
                                                                dim_feedforward=feedforward_dim,
                                                                dropout=dropout)
-        self.transformer_encoder = nn.TransformerEncoder(transformer_encoder_layer, num_layers=nlayers)
-
-        if image_encoder == 'resnet18':
-            self.cnn = resnet.resnet18(output_channels=image_feature_dim)
-        elif image_encoder == 'resnet34':
-            self.cnn = resnet.resnet34(output_channels=image_feature_dim)
-        elif image_encoder == 'resnet50':
-            self.cnn = resnet.resnet50(output_channels=image_feature_dim)
-        elif image_encoder == 'resnet101':
-            self.cnn = resnet.resnet101(output_channels=image_feature_dim)
-        elif image_encoder == 'resnet152':
-            self.cnn = resnet.resnet152(output_channels=image_feature_dim)
-        else:
-            raise NotImplementedError()
+        self.transformer_encoder = nn.TransformerEncoder(transformer_encoder_layer, num_layers=n_layers)
+        self.cnn = ImageBackboneFactory.get_backbones(image_encoder, imagenet_pretrained,
+                                                      output_channels=image_feature_dim)
 
         self.conv = nn.Conv2d(image_feature_dim, out_dim, self.roi_pooling_size)
         self.bn = nn.BatchNorm2d(out_dim)

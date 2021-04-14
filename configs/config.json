@@ -16,11 +16,12 @@
             "encoder_kwargs":{
                 "char_embedding_dim":-1,
                 "out_dim": 512,
-                "nheaders": 4,
-                "nlayers": 3,
+                "n_headers": 4,
+                "n_layers": 3,
                 "feedforward_dim": 1024,
                 "dropout": 0.1,
-                "image_encoder": "resnet50",
+                "image_encoder": "shufflenet_v2_x2_0",
+                "imagenet_pretrained": false,
                 "roi_pooling_mode": "roi_align",
                 "roi_pooling_size": [7,7]
             },
@@ -124,7 +125,7 @@
         "val_step_interval": 50,
 
         "save_dir": "/tmp/PICK/",
-        "save_period": 20,
+        "save_period": 5,
         "log_verbosity": 2,
 
         "monitor": "max overall-mEF",

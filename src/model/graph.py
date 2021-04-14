@@ -9,7 +9,7 @@ import torch.nn as nn
 from torch import Tensor
 import torch.nn.functional as F
 
-from datasets import documents
+from src.datasets import documents
 
 
 class GraphLearningLayer(nn.Module):

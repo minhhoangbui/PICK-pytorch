@@ -1,7 +1,7 @@
 ## Data format example
 This implementation requires the input data in the following format:
 ### Training/Validation data
-1. `train_samples_list.csv` file: multi-line with format: `index,document_type,file_name`.
+1. `train_list.csv` file: multi-line with format: `index,document_type,file_name`.
 2. `boxes_and_transcripts` folder: `file_name.tsv` files.
     * every `file_name.tsv` file has multi-line with format: `index,box_coordinates (clockwise 8 values),
     transcripts,box_entity_types` .

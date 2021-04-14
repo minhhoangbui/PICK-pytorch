@@ -2,8 +2,6 @@
 # @Author: Wenwen Yu
 # @Created Time: 7/8/2020 10:54 PM
 
-from typing import *
-
 import torch
 import torch.nn as nn
 import numpy as np
@@ -11,7 +9,7 @@ import numpy as np
 from .encoder import Encoder
 from .graph import GLCN
 from .decoder import Decoder
-from utils.class_utils import keys_vocab_cls
+from src.utils.class_utils import keys_vocab_cls
 
 
 class PICKModel(nn.Module):

@@ -10,7 +10,7 @@ import torch.nn as nn
 from torch import Tensor
 
 from .crf import ConditionalRandomField
-from utils.class_utils import keys_vocab_cls
+from src.utils.class_utils import keys_vocab_cls
 
 logger = logging.getLogger('PICK')
 

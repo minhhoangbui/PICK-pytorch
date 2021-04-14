@@ -11,13 +11,13 @@ import torch
 from torch.utils.data.dataloader import DataLoader
 import pandas as pd
 
-from model.graph import GLCN
-from parse_config import ConfigParser
-import model.pick as pick_arch
-from datasets import pick_dataset
+from src.model import GLCN
+from src.runner.config_parser import ConfigParser
+import src.model.pick as pick_arch
+from src.datasets import pick_dataset
 
-from model import resnet
-from datasets.pick_dataset import PICKDataset, BatchCollateFn
+from src.model.backbones import resnet
+from src.datasets.pick_dataset import PICKDataset, BatchCollateFn
 
 
 def test_glcn_model():

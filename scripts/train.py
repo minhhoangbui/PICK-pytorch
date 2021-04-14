@@ -12,12 +12,12 @@ import torch.distributed as dist
 import torch.utils.data
 import torch.backends.cudnn
 
-import model.pick as pick_arch_module
-from datasets import pick_dataset as pick_dataset_module
+import src.model.pick as pick_arch_module
+from src.datasets import pick_dataset as pick_dataset_module
 
-from datasets.pick_dataset import BatchCollateFn
-from parse_config import ConfigParser
-from trainer import Trainer
+from src.datasets.pick_dataset import BatchCollateFn
+from src.runner.config_parser import ConfigParser
+from src.runner import Trainer
 
 
 # fix random seeds for reproducibility
