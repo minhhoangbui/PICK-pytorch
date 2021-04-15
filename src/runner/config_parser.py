@@ -14,7 +14,7 @@ from src.utils import read_json, write_json
 
 
 class ConfigParser:
-    def __init__(self, config, resume=None, modification=None, run_id=None):
+    def __init__(self, config, resume=None, modification=None):
         """
         class to parse configuration json file. Handles hyper-parameters for training, initializations of modules,
         checkpoint saving
@@ -23,8 +23,6 @@ class ConfigParser:
         example.
         :param resume: String, path to the checkpoint being loaded.
         :param modification: Dict keychain:value, specifying position values to be replaced from config dict.
-        :param run_id: Unique Identifier for training processes. Used to save checkpoints and training log. Timestamp is
-        being used as default
         """
         # load config file and apply modification
         self._config = _update_config(config, modification)
@@ -32,22 +30,20 @@ class ConfigParser:
         # str to bool, from modification or from default json file
         self.update_config('distributed', (self.config['distributed'] == 'true') or self.config['distributed'])
 
-        if self.config['local_rank'] == 0: # only local master process create saved output dir
+        if self.config['local_rank'] == 0:  # only local master process create saved output dir
             # set save_dir where trained model and log will be saved.
             save_dir = Path(self.config['trainer']['save_dir'])
 
             experiment_name = self.config['name']
-            if run_id is None:  # use timestamp as default run-id
-                run_id = datetime.now().strftime(r'%m%d_%H%M%S')
-            else:
-                run_id = run_id + '_' + datetime.now().strftime(r'%m%d_%H%M%S')
-            self._save_dir = save_dir / 'models' / experiment_name / run_id
-            self._log_dir = save_dir / 'log' / experiment_name / run_id
+
+            self.save_dir = save_dir / 'models' / experiment_name
+            self.log_dir = save_dir / 'log' / experiment_name
+            self.tensorboard_dir = save_dir / 'tensorboard' / experiment_name
 
             # make directory for saving checkpoints and log.
-            exist_ok = run_id == ''
-            self.save_dir.mkdir(parents=True, exist_ok=exist_ok)
-            self.log_dir.mkdir(parents=True, exist_ok=exist_ok)
+            self.save_dir.mkdir(parents=True, exist_ok=False)
+            self.log_dir.mkdir(parents=True, exist_ok=False)
+            self.tensorboard_dir.mkdir(parents=True, exist_ok=False)
 
             # save updated config file to the checkpoint dir, only local master save file
             write_json(self.config, self.save_dir / 'config.json')
@@ -88,7 +84,7 @@ class ConfigParser:
 
         # parse custom cli options into dictionary
         modification = {opt.target: getattr(args, _get_opt_name(opt.flags)) for opt in options}
-        return cls(config, resume, modification, config['run_id'])
+        return cls(config, resume, modification)
 
     def init_obj(self, name, module, *args, **kwargs):
         """
@@ -141,14 +137,6 @@ class ConfigParser:
     @property
     def config(self):
         return self._config
-
-    @property
-    def save_dir(self):
-        return self._save_dir
-
-    @property
-    def log_dir(self):
-        return self._log_dir
 
 
 # helper functions to update config dict with custom cli options

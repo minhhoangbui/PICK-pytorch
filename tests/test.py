@@ -54,18 +54,18 @@ def test_resnet():
     print(x.shape)
 
 
-def test_datasets():
-    filename = Path(__file__).parent.parent.joinpath('data/data_examples_root/train_samples_list.csv').as_posix()
-    dataset = PICKDataset(
+def test_train_datasets():
+    filename = Path(__file__).parent.parent.joinpath('/home/hoangbm/ner_data/sroie/test/test_list.csv').as_posix()
+    train_dataset = PICKDataset(
         dataset_name='sroie',
         files_name=filename,
         iob_tagging_type='box_and_within_box_level',
         resized_image_size=(480, 960)
     )
-
+    _ = train_dataset[4]
     exit()
 
-    data_loader = DataLoader(dataset, batch_size=10, collate_fn=BatchCollateFn(), num_workers=2)
+    data_loader = DataLoader(train_dataset, batch_size=10, collate_fn=BatchCollateFn(), num_workers=2)
     for idx, data_item in tqdm(enumerate(data_loader)):
         whole_image = data_item['whole_image']
         relation_features = data_item['relation_features']
@@ -82,6 +82,19 @@ def test_datasets():
         print('boxes_coordinate: ', boxes_coordinate.shape)
         print('mask: ', mask.shape)
         exit()
+
+
+def test_evaluate_datasets():
+    bboxes_and_transcripts = '/home/hoangbm/ner_data/bizi/test/boxes_and_transcripts'
+    images_dir = '/home/hoangbm/ner_data/bizi/test/images'
+    test_dataset = PICKDataset(
+        dataset_name='bizi',
+        boxes_and_transcripts_folder=bboxes_and_transcripts,
+        images_folder=images_dir,
+        resized_image_size=(480, 960),
+        ignore_error=False, training=False
+    )
+    _ = test_dataset[5]
 
 
 def test_model_forward():
@@ -175,6 +188,7 @@ if __name__ == '__main__':
     # test_glcn_model()
     # test_model()
     # test_resnet()
-    test_datasets()
+    # test_train_datasets()
+    test_evaluate_datasets()
     # test_model_forward()
     # test_metrics()

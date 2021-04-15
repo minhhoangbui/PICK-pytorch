@@ -173,7 +173,10 @@ class Document:
                                                                                       self.entities_list)
                 elif self.iob_tagging_type == 'box_and_within_box_level':
                     if self.dataset_name == 'bizi':
-                        box_label_entities = ['buyer_address_line', 'seller_address_line']
+                        box_label_entities = ['buyer_address_line', 'seller_address_line',
+                                              'total_vat_amount', 'total_amount_without_vat',
+                                              'total_amount_with_vat_in_words', 'vat_amount',
+                                              'discount_amount']
                     else:
                         box_label_entities = ['address']
                     iob_tags_label = text2iob_label_with_box_and_within_box_exactly_level(box_entity_types[:boxes_num],
@@ -185,6 +188,7 @@ class Document:
                 iob_tags_label = Document.IOBTagsField.process(iob_tags_label)[:, :transcript_len].numpy()
 
             # texts shape is (num_texts, max_texts_len), texts_len shape is (num_texts,)
+
             texts, texts_len = Document.TextSegmentsField.process(text_segments)
             texts = texts[:, :transcript_len].numpy()
             texts_len = np.clip(texts_len.numpy(), 0, transcript_len)

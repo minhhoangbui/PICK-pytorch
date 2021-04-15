@@ -61,10 +61,10 @@ def main(config: ConfigParser, local_master: bool, logger=None):
     logger.info('Optimizer and lr_scheduler created.') if local_master else None
 
     # print training related information
-    logger.info('Max_epochs: {} Log_per_step: {} Validation_per_step: {}.'.
+    logger.info('Max_epochs: {} Log_per_step: {} Validation_per_epoch: {}.'.
                 format(config['trainer']['epochs'],
                        config['trainer']['log_step_interval'],
-                       config['trainer']['val_step_interval'])) if local_master else None
+                       config['trainer']['val_epoch_interval'])) if local_master else None
 
     logger.info('Training start...') if local_master else None
     trainer = Trainer(pick_model, optimizer,

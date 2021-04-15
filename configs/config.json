@@ -1,10 +1,10 @@
 {
-    "name": "PICK_Default",
-    "run_id":"test",
+    "name": "shufflenet_sroie",
 
     "distributed":true,
     "local_world_size":4,
     "local_rank":-1,
+    "evaluate_only": false,
 
     "model_arch": {
         "type": "PICKModel",
@@ -84,7 +84,7 @@
     "train_data_loader": {
         "type": "DataLoader",
         "args":{
-            "batch_size": 2,
+            "batch_size": 4,
             "shuffle": true,
             "drop_last": true,
             "num_workers": 8,
@@ -122,7 +122,7 @@
         "epochs": 100,
         "gl_loss_lambda": 0.01,
         "log_step_interval": 10,
-        "val_step_interval": 50,
+        "val_epoch_interval": 5,
 
         "save_dir": "/tmp/PICK/",
         "save_period": 5,
@@ -133,7 +133,7 @@
         "early_stop": 40,
 
         "anomaly_detection": false,
-        "tensorboard": false,
+        "tensorboard": true,
 
         "sync_batch_norm":true
     }

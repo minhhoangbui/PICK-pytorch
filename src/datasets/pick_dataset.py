@@ -62,6 +62,7 @@ class PICKDataset(data.Dataset):
         and files_name and entities_file must be set.
         """
         super().__init__()
+        assert dataset_name is not None, "Have to specify dataset name"
         self.dataset_name = dataset_name
         self._image_ext = None
         self._ann_ext = None
@@ -70,7 +71,7 @@ class PICKDataset(data.Dataset):
         self.training = training
         assert resized_image_size and len(resized_image_size) == 2, 'resized image size not be set.'
         self.resized_image_size = tuple(resized_image_size)  # (w, h)
-        assert dataset_name is not None, "Have to specify dataset name"
+
         self.entities_list = eval(f'{dataset_name}_entities_list')
         self.iob_labels_vocab_cls = ClassVocab(entities2iob_labels(self.entities_list),
                                                specials_first=False)

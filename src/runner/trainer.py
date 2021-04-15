@@ -12,7 +12,8 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 from src.utils import inf_loop
 from src.utils.metrics import MetricTracker, SpanBasedF1MetricTracker
-from src.logger import TensorboardWriter
+from torch.utils.tensorboard import SummaryWriter
+# from src.logger import TensorboardWriter
 from src.utils.utils import to_union
 
 
@@ -76,8 +77,8 @@ class Trainer:
         if self.local_master:
             self.checkpoint_dir = config.save_dir
             # setup visualization writer instance
-            self.writer = TensorboardWriter(config.log_dir, self.logger, cfg_trainer['tensorboard'])
-
+            # self.writer = TensorboardWriter(config.log_dir, self.logger, cfg_trainer['tensorboard'])
+            self.writer = SummaryWriter(config.tensorboard_dir)
         # load checkpoint for resume training
         if config.resume is not None:
             self._resume_checkpoint(config.resume)
@@ -106,9 +107,7 @@ class Trainer:
         self.log_step = log_step if log_step != -1 and 0 < log_step < self.len_step else int(
             np.sqrt(data_loader.batch_size))
 
-        val_step_interval = self.config['trainer']['val_step_interval']
-
-        self.val_step_interval = val_step_interval
+        self.val_epoch_interval = self.config['trainer']['val_epoch_interval']
 
         self.gl_loss_lambda = self.config['trainer']['gl_loss_lambda']
 
@@ -126,6 +125,14 @@ class Trainer:
 
         not_improved_count = 0
         val_result_dict = None
+        if self.config['evaluate_only']:
+            print("------Evaluation only------")
+            val_result_dict = self._valid_epoch(0)
+            val_res = SpanBasedF1MetricTracker.dict2str(val_result_dict)
+
+            self.logger_info('[Step Validation] Epoch:[{}/{}]]  \n{}'.
+                             format(0, self.epochs, val_res))
+            return
         for epoch in range(self.start_epoch, self.epochs + 1):
 
             # ensure distribute worker sample different data,
@@ -246,10 +253,10 @@ class Trainer:
             avg_crf_loss = torch.mean(crf_loss)
             avg_loss = avg_crf_loss + self.gl_loss_lambda * avg_gl_loss
             # update metrics
-            self.writer.set_step((epoch - 1) * self.len_step + step_idx - 1) if self.local_master else None
-            self.train_loss_metrics.update('loss', avg_loss.item())
-            self.train_loss_metrics.update('gl_loss', avg_gl_loss.item() * self.gl_loss_lambda)
-            self.train_loss_metrics.update('crf_loss', avg_crf_loss.item())
+            # self.writer.set_step((epoch - 1) * self.len_step + step_idx - 1) if self.local_master else None
+            self.train_loss_metrics.update('loss', avg_loss.item(), epoch)
+            self.train_loss_metrics.update('gl_loss', avg_gl_loss.item() * self.gl_loss_lambda, epoch)
+            self.train_loss_metrics.update('crf_loss', avg_crf_loss.item(), epoch)
 
             # log messages
             if step_idx % self.log_step == 0:
@@ -257,23 +264,23 @@ class Trainer:
                                  format(epoch, self.epochs, step_idx, self.len_step,
                                         avg_loss.item(), avg_gl_loss.item() * self.gl_loss_lambda, avg_crf_loss.item()))
 
-            # do validation after val_step_interval iteration
-            if self.do_validation and step_idx % self.val_step_interval == 0:
-                val_result_dict = self._valid_epoch(epoch)
-                self.logger_info('[Step Validation] Epoch:[{}/{}] Step:[{}/{}]  \n{}'.
-                                 format(epoch, self.epochs, step_idx, self.len_step,
-                                        SpanBasedF1MetricTracker.dict2str(val_result_dict)))
-
-                # check if best metric, if true, then save as model_best checkpoint.
-                best, not_improved_count = self._is_best_monitor_metric(False, 0, val_result_dict)
-                if best:
-                    self._save_checkpoint(epoch, best)
-
             # decide whether continue iter
             if step_idx == self.len_step + 1:
                 break
 
         # step iteration end ##
+
+        # do validation after val_step_interval iteration
+        if self.do_validation and epoch % self.val_epoch_interval == 0:
+            val_result_dict = self._valid_epoch(epoch)
+            self.logger_info('[Step Validation] Epoch:[{}/{}]]  \n{}'.
+                             format(epoch, self.epochs, self.len_step,
+                                    SpanBasedF1MetricTracker.dict2str(val_result_dict)))
+
+            # check if best metric, if true, then save as model_best checkpoint.
+            best, not_improved_count = self._is_best_monitor_metric(False, 0, val_result_dict)
+            if best:
+                self._save_checkpoint(epoch, best)
 
         # {'loss': avg_loss, 'gl_loss': avg_gl_loss, 'crf_loss': avg_crf_loss}
         log = self.train_loss_metrics.result()
@@ -285,6 +292,7 @@ class Trainer:
 
         if self.lr_scheduler is not None:
             self.lr_scheduler.step()
+        self.model.train()
 
         return log
 
@@ -319,8 +327,8 @@ class Trainer:
                 for path, score in best_paths:
                     predicted_tags.append(path)
 
-                self.writer.set_step((epoch - 1) * len(self.valid_data_loader) + step_idx, 'valid') \
-                    if self.local_master else None
+                # self.writer.set_step((epoch - 1) * len(self.valid_data_loader) + step_idx, 'valid') \
+                #     if self.local_master else None
 
                 # calculate and update f1 metrics
                 # (B, N*T, out_dim)
@@ -331,6 +339,7 @@ class Trainer:
 
                 golden_tags = input_data_item['iob_tags_label']
                 mask = input_data_item['mask']
+
                 union_iob_tags = to_union(golden_tags, mask, self.iob_labels_vocab_cls)
 
                 if self.distributed:
@@ -343,8 +352,10 @@ class Trainer:
 
         f1_result_dict = self.valid_f1_metrics.result()
 
-        # rollback to train mode
-        self.model.train()
+        overall_dict = f1_result_dict['overall']
+        if self.local_master:
+            for key, value in overall_dict.items():
+                self.writer.add_scalar(key, value, epoch)
 
         return f1_result_dict
 

@@ -26,11 +26,11 @@ class MetricTracker:
         for col in self._data.columns:
             self._data[col].values[:] = 0
 
-    def update(self, key, value, n=1):
+    def update(self, key, value, epoch):
         if self.writer is not None:
-            self.writer.add_scalar(key, value)
-        self._data.total[key] += value * n
-        self._data.counts[key] += n
+            self.writer.add_scalar(key, value, epoch)
+        self._data.total[key] += value
+        self._data.counts[key] += 1
         self._data.average[key] = self._data.total[key] / self._data.counts[key]
 
     def avg(self, key):
@@ -65,8 +65,10 @@ class SpanBasedF1MetricTracker:
                 item['mEP'] = v
             elif 'mER' in k:
                 item['mER'] = v
-            else:
+            elif 'mEA' in k:
                 item['mEA'] = v
+            else:
+                item['support'] = v
             data_dict[entity] = item
 
         return data_dict
@@ -76,7 +78,7 @@ class SpanBasedF1MetricTracker:
 
     @staticmethod
     def dict2str(data_dict: Dict):
-        data_list = [['name', 'mEP', 'mER', 'mEF', 'mEA']]
+        data_list = [['name', 'mEP', 'mER', 'mEF', 'mEA', 'support']]
         for k, v in data_dict.items():
-            data_list.append([k, v['mEP'], v['mER'], v['mEF'], v['mEA']])
+            data_list.append([k, v['mEP'], v['mER'], v['mEF'], v['mEA'], v['support']])
         return tabulate.tabulate(data_list, tablefmt='grid', headers='firstrow')

@@ -147,7 +147,7 @@ class SpanBasedF1Measure(Metric):
 
         if prediction_map is None:
             batch_size = gold_labels.size(0)
-            prediction_map = torch.tensor([self.mapped_class for i in range(batch_size)]).long().to(gold_labels.device)
+            prediction_map = torch.tensor([self.mapped_class for _ in range(batch_size)]).long().to(gold_labels.device)
 
         argmax_predictions = torch.gather(prediction_map, 1, argmax_predictions)
         gold_labels = torch.gather(prediction_map, 1, gold_labels.long())
@@ -268,9 +268,11 @@ class SpanBasedF1Measure(Metric):
             recall_key = "mER" + "-" + tag
             f1_key = "mEF" + "-" + tag
             accuracy_key = "mEA" + "-" + tag
+            support_key = 'support' + '-' + tag
             all_metrics[precision_key] = precision
             all_metrics[recall_key] = recall
             all_metrics[f1_key] = f1_measure
+            all_metrics[support_key] = self._total[tag]
 
             all_metrics[accuracy_key] = self._true_positives[tag] / (self._total[tag] + 1e-13)
 
@@ -286,6 +288,8 @@ class SpanBasedF1Measure(Metric):
             all_metrics["mEA-overall"] = sum(self._true_positives.values()) / sum(self._total.values())
         else:
             all_metrics["mEA-overall"] = 0
+
+        all_metrics['support-overall'] = sum(self._total.values())
 
         if reset:
             self.reset()
