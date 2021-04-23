@@ -44,7 +44,7 @@ def iob_index_to_str(tags: List[List[int]], iob_labels_vocab_cls):
 
 def text_index_to_str(texts: torch.Tensor, mask: torch.Tensor):
     # union_texts: (B, num_boxes * T)
-    union_texts = to_union(texts, mask)
+    union_texts = to_union(texts, mask, keys_vocab_cls)
     B, NT = union_texts.shape
 
     decoded_tags_list = []

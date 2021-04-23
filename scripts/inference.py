@@ -71,7 +71,7 @@ def main(args):
             # convert iob index to iob string
             decoded_tags_list = iob_index_to_str(predicted_tags, iob_labels_vocab_cls)
             # union text as a sequence and convert index to string
-            decoded_texts_list = text_index_to_str(text_segments, mask)
+            decoded_texts_list = text_index_to_str(text_segments, mask, iob_labels_vocab_cls)
 
             for decoded_tags, decoded_texts, image_index in zip(decoded_tags_list, decoded_texts_list, image_ids):
                 # List[ Tuple[str, Tuple[int, int]] ]

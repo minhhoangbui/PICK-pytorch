@@ -63,7 +63,6 @@ def test_train_datasets():
         resized_image_size=(480, 960)
     )
     _ = train_dataset[4]
-    exit()
 
     data_loader = DataLoader(train_dataset, batch_size=10, collate_fn=BatchCollateFn(), num_workers=2)
     for idx, data_item in tqdm(enumerate(data_loader)):

@@ -385,15 +385,15 @@ class Trainer:
         :return:
         """
         if self.distributed:
-            ngpu_per_process = torch.cuda.device_count() // local_world_size
-            device_ids = list(range(local_rank * ngpu_per_process, (local_rank + 1) * ngpu_per_process))
+            n_gpu_per_process = torch.cuda.device_count() // local_world_size
+            device_ids = list(range(local_rank * n_gpu_per_process, (local_rank + 1) * n_gpu_per_process))
 
             if torch.cuda.is_available() and local_rank != -1:
                 torch.cuda.set_device(device_ids[0])  # device_ids[0] =local_rank if local_world_size = n_gpu per node
                 device = 'cuda'
                 self.logger_info(
                     f"[Process {os.getpid()}] world_size = {dist.get_world_size()}, "
-                    + f"rank = {dist.get_rank()}, n_gpu/process = {ngpu_per_process}, device_ids = {device_ids}"
+                    + f"rank = {dist.get_rank()}, n_gpu/process = {n_gpu_per_process}, device_ids = {device_ids}"
                 )
             else:
                 self.logger_warning('Training will be using CPU!')

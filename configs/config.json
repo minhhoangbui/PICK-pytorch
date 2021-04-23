@@ -1,5 +1,5 @@
 {
-    "name": "shufflenet_sroie",
+    "name": "shuffle_mixture_refined_box_lvl",
 
     "distributed":true,
     "local_world_size":4,
@@ -58,8 +58,8 @@
     "train_dataset": {
         "type": "PICKDataset",
         "args": {
-            "dataset_name": "sroie",
-            "files_name":"/home/hoangbm/ner_data/sroie/train/train_list.csv",
+            "dataset_name": "bizi",
+            "files_name":"/home/hoangbm/ner_data/bizi/train/train_list.csv",
             "boxes_and_transcripts_folder":"boxes_and_transcripts",
             "images_folder":"images",
             "entities_folder":"entities",
@@ -71,8 +71,8 @@
     "validation_dataset": {
         "type": "PICKDataset",
         "args": {
-            "dataset_name": "sroie",
-            "files_name":"/home/hoangbm/ner_data/sroie/test/test_list.csv",
+            "dataset_name": "bizi",
+            "files_name":"/home/hoangbm/ner_data/bizi/test/test_list.csv",
             "boxes_and_transcripts_folder":"boxes_and_transcripts",
             "images_folder":"images",
             "entities_folder":"entities",
@@ -84,7 +84,7 @@
     "train_data_loader": {
         "type": "DataLoader",
         "args":{
-            "batch_size": 4,
+            "batch_size": 2,
             "shuffle": true,
             "drop_last": true,
             "num_workers": 8,
@@ -122,7 +122,7 @@
         "epochs": 100,
         "gl_loss_lambda": 0.01,
         "log_step_interval": 10,
-        "val_epoch_interval": 5,
+        "val_epoch_interval": 1,
 
         "save_dir": "/tmp/PICK/",
         "save_period": 5,

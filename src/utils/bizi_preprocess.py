@@ -78,10 +78,10 @@ def check_availability(ocr_folder, image_folder):
 
 
 if __name__ == '__main__':
-    ocr_dir = '/home/hoangbm/bizi_dataset/ocr/'
-    image_dir = '/home/hoangbm/bizi_dataset/images'
+    ocr_dir = '/home/hoangbm/ner_data/bizi/ocr/'
+    image_dir = '/home/hoangbm/ner_data/bizi/images'
     file_list = glob.glob(os.path.join(ocr_dir, '*.xlsx'))
-    train, test = train_test_split(file_list, test_size=0.2, random_state=42)
+    train, test = train_test_split(file_list, test_size=0.1, random_state=12)
     print(f"Number of training sample: {len(train)}")
     print(f"Number of test sample: {len(test)}")
     train_image_dir = '/home/hoangbm/bizi_dataset/train/images'

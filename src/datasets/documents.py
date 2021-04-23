@@ -173,10 +173,13 @@ class Document:
                                                                                       self.entities_list)
                 elif self.iob_tagging_type == 'box_and_within_box_level':
                     if self.dataset_name == 'bizi':
-                        box_label_entities = ['buyer_address_line', 'seller_address_line',
-                                              'total_vat_amount', 'total_amount_without_vat',
-                                              'total_amount_with_vat_in_words', 'vat_amount',
-                                              'discount_amount']
+                        box_label_entities = ['buyer_address_line', 'buyer_legal_name',
+                                              'vat_percentage', 'seller_address_line',
+                                              'total_price_before_vat', 'total_vat_amount',
+                                              'total_amount_with_vat', 'invoice_series', 'total_amount_without_vat',
+                                              'seller_tax_code', 'buyer_tax_code', 'unit',
+                                              'vat_amount', 'total_price_after_vat', 'discount_amount',
+                                              'quantity', 'buyer_display_name']
                     else:
                         box_label_entities = ['address']
                     iob_tags_label = text2iob_label_with_box_and_within_box_exactly_level(box_entity_types[:boxes_num],
