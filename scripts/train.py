@@ -11,6 +11,8 @@ import torch
 import torch.distributed as dist
 import torch.utils.data
 import torch.backends.cudnn
+import sys
+sys.path.append('/data/hoangbm/codes/PICK-pytorch')
 
 import src.model.pick as pick_arch_module
 from src.datasets import pick_dataset as pick_dataset_module

@@ -58,8 +58,8 @@
     "train_dataset": {
         "type": "PICKDataset",
         "args": {
-            "dataset_name": "sroie",
-            "files_name":"/home/hoangbm/ner_data/sroie/train/train_list.csv",
+            "dataset_name": "bizi",
+            "files_name":"/data/hoangbm/datasets/ner/bizi/train/train_list.csv",
             "boxes_and_transcripts_folder":"boxes_and_transcripts",
             "images_folder":"images",
             "entities_folder":"entities",
@@ -71,8 +71,8 @@
     "validation_dataset": {
         "type": "PICKDataset",
         "args": {
-            "dataset_name": "sroie",
-            "files_name":"/home/hoangbm/ner_data/sroie/test/test_list.csv",
+            "dataset_name": "bizi",
+            "files_name":"/data/hoangbm/datasets/ner/bizi/test/test_list.csv",
             "boxes_and_transcripts_folder":"boxes_and_transcripts",
             "images_folder":"images",
             "entities_folder":"entities",
