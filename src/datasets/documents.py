@@ -10,7 +10,7 @@ import json
 import string
 from pathlib import Path
 
-from torchtext.data import Field, RawField
+from torchtext.legacy.data import Field, RawField
 import numpy as np
 
 from src.utils.class_utils import keys_vocab_cls, ClassVocab, entities2iob_labels

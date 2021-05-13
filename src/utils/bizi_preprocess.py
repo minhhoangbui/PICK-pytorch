@@ -19,8 +19,11 @@ def process_excel(file_name, o_image_dir=None, out_boxes_transcripts_dir=None,
     original_image_path = os.path.join(o_image_dir, file_name + '.jpg')
     if os.path.isfile(original_image_path):
         image = cv2.imread(original_image_path)
-        assert image.shape[0] == image_height and image.shape[1] == image_width, \
-            f"Image {file_name} with size!!!"
+        if image.shape[0] != image_height or image.shape[1] != image_width:
+            print(file_name)
+            print(image_width, image_height)
+            print(image.shape)
+            return False
         shutil.copy(os.path.join(o_image_dir, file_name + '.jpg'),
                     os.path.join(image_dir, file_name + '.jpg'))
     else:
@@ -62,6 +65,7 @@ def process_excel(file_name, o_image_dir=None, out_boxes_transcripts_dir=None,
         entities[k] = v[:-2]
     with open(os.path.join(entities_dir, file_name + '.txt'), 'w') as fp:
         json.dump(entities, fp)
+    return True
 
 
 def check_availability(ocr_folder, image_folder):
@@ -77,16 +81,33 @@ def check_availability(ocr_folder, image_folder):
             print(f'{im} not in ocr_list')
 
 
+def check_duplicates(old_dir, new_dir):
+    old_list = os.listdir(old_dir)
+    new_list = os.listdir(new_dir)
+    old_list = [os.path.splitext(of)[0] for of in old_list]
+    new_list = [os.path.splitext(nf)[0] for nf in new_list]
+    count = 0
+    for of in old_list:
+        if of in new_list:
+            count += 1
+        else:
+            print(of)
+    print(f'{count} files duplicated')
+
+
 if __name__ == '__main__':
-    ocr_dir = '/home/hoangbm/ner_data/bizi/ocr/'
-    image_dir = '/home/hoangbm/ner_data/bizi/images'
+
+    ocr_dir = '/data/hoangbm/datasets/ner/bizi/ocr'
+    image_dir = '/data/hoangbm/datasets/ner/bizi/images'
+    # check_availability(ocr_dir, image_dir)
+
     file_list = glob.glob(os.path.join(ocr_dir, '*.xlsx'))
     train, test = train_test_split(file_list, test_size=0.1, random_state=12)
     print(f"Number of training sample: {len(train)}")
     print(f"Number of test sample: {len(test)}")
-    train_image_dir = '/home/hoangbm/bizi_dataset/train/images'
-    train_entity_dir = '/home/hoangbm/bizi_dataset/train/entities'
-    train_boxes_dir = '/home/hoangbm/bizi_dataset/train/boxes_and_transcripts'
+    train_image_dir = '/data/hoangbm/datasets/ner/bizi/train/images'
+    train_entity_dir = '/data/hoangbm/datasets/ner/bizi/train/entities'
+    train_boxes_dir = '/data/hoangbm/datasets/ner/bizi/train/boxes_and_transcripts'
     if os.path.exists(train_image_dir):
         shutil.rmtree(train_image_dir)
     os.makedirs(train_image_dir)
@@ -97,9 +118,9 @@ if __name__ == '__main__':
         shutil.rmtree(train_boxes_dir)
     os.makedirs(train_boxes_dir)
 
-    test_image_dir = '/home/hoangbm/bizi_dataset/test/images'
-    test_entity_dir = '/home/hoangbm/bizi_dataset/test/entities'
-    test_boxes_dir = '/home/hoangbm/bizi_dataset/test/boxes_and_transcripts'
+    test_image_dir = '/data/hoangbm/datasets/ner/bizi/test/images'
+    test_entity_dir = '/data/hoangbm/datasets/ner/bizi/test/entities'
+    test_boxes_dir = '/data/hoangbm/datasets/ner/bizi/test/boxes_and_transcripts'
 
     if os.path.exists(test_image_dir):
         shutil.rmtree(test_image_dir)
@@ -111,24 +132,28 @@ if __name__ == '__main__':
         shutil.rmtree(test_boxes_dir)
     os.makedirs(test_boxes_dir)
 
-    with open('/home/hoangbm/bizi_dataset/train/train_list.csv', mode='w') as fp:
+    with open('/data/hoangbm/datasets/ner/bizi/train/train_list.csv', mode='w') as fp:
         writer = csv.writer(fp, delimiter=',')
         for i, fname in enumerate(train):
-            process_excel(fname, o_image_dir=image_dir,
-                          image_dir=train_image_dir,
-                          entities_dir=train_entity_dir,
-                          out_boxes_transcripts_dir=train_boxes_dir)
+            successful = process_excel(fname, o_image_dir=image_dir,
+                                       image_dir=train_image_dir,
+                                       entities_dir=train_entity_dir,
+                                       out_boxes_transcripts_dir=train_boxes_dir)
+            if not successful:
+                continue
             temp_name = os.path.basename(fname)
             temp_name = os.path.splitext(temp_name)[0]
             writer.writerow([i, temp_name])
 
-    with open('/home/hoangbm/bizi_dataset/test/test_list.csv', mode='w') as fp:
+    with open('/data/hoangbm/datasets/ner/bizi/test/test_list.csv', mode='w') as fp:
         writer = csv.writer(fp, delimiter=',')
         for i, fname in enumerate(test):
-            process_excel(fname, o_image_dir=image_dir,
-                          image_dir=test_image_dir,
-                          entities_dir=test_entity_dir,
-                          out_boxes_transcripts_dir=test_boxes_dir)
+            successful = process_excel(fname, o_image_dir=image_dir,
+                                       image_dir=test_image_dir,
+                                       entities_dir=test_entity_dir,
+                                       out_boxes_transcripts_dir=test_boxes_dir)
+            if not successful:
+                continue
             temp_name = os.path.basename(fname)
             temp_name = os.path.splitext(temp_name)[0]
             writer.writerow([i, temp_name])
