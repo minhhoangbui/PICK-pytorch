@@ -1,10 +1,10 @@
 {
-    "name": "shuffle_mixture_refined_box_lvl",
+    "name": "shuffle_fused_lvl_eval",
 
     "distributed":true,
     "local_world_size":4,
     "local_rank":-1,
-    "evaluate_only": false,
+    "evaluate_only": true,
 
     "model_arch": {
         "type": "PICKModel",
@@ -64,7 +64,7 @@
             "boxes_and_transcripts_folder":"boxes_and_transcripts",
             "images_folder":"images",
             "entities_folder":"entities",
-            "iob_tagging_type":"box_and_within_box_level",
+            "iob_tagging_type":"box_level",
             "resized_image_size": [480, 960],
             "ignore_error": false
         }
@@ -77,7 +77,7 @@
             "boxes_and_transcripts_folder":"boxes_and_transcripts",
             "images_folder":"images",
             "entities_folder":"entities",
-            "iob_tagging_type":"box_and_within_box_level",
+            "iob_tagging_type":"box_level",
             "resized_image_size": [480, 960],
             "ignore_error": false
         }
